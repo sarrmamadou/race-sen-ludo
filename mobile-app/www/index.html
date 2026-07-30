@@ -2,7 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RACE-SEN-LUDO">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d2b26">
 <title>RACE-SEN-LUDO</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -26,8 +31,14 @@
     src:local("Arial");
   }
   *{box-sizing:border-box;}
+  *{ -webkit-tap-highlight-color:transparent; }
   html,body{
     margin:0;padding:0;min-height:100vh;
+    overscroll-behavior:none;
+    -webkit-user-select:none;user-select:none;
+    touch-action:manipulation;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
     background:
       radial-gradient(circle at 15% 10%, #164a41 0%, transparent 45%),
       radial-gradient(circle at 90% 85%, #17352f 0%, transparent 40%),
@@ -58,6 +69,7 @@
     .panel{padding:12px 12px 14px;}
     .board-wrap{margin:0 -4px;}
   }
+  input, textarea, select{ -webkit-user-select:text; user-select:text; }
   .log-collapsed .log{display:none;}
 
   /* Mode plein écran : ne montre que le plateau, les dés, et à qui le tour */
@@ -74,16 +86,19 @@
   body.fs-mode .app{ padding:10px; max-width:none; }
   body.fs-mode .layout{ grid-template-columns:1fr; gap:0; }
   body.fs-mode .board-wrap{
-    min-height:calc(100vh - 40px); display:flex; flex-direction:column;
+    min-height:calc(100vh - 70px); display:flex; flex-direction:column;
     align-items:center; justify-content:center;
   }
-  .fs-turn-indicator{
-    display:none; text-align:center; font-family:Georgia,serif; font-weight:700;
-    font-size:1.25rem; color:var(--gold); margin-bottom:10px;
+  .fs-header-row{
+    display:none; align-items:center; justify-content:space-between; gap:10px;
+    flex-wrap:wrap; padding:calc(env(safe-area-inset-top) + 6px) 4px 10px;
   }
-  body.fs-mode .fs-turn-indicator{ display:block; }
-  .fs-exit-btn{ display:none; position:fixed; top:12px; right:12px; z-index:95; }
-  body.fs-mode .fs-exit-btn{ display:inline-block; }
+  body.fs-mode .fs-header-row{ display:flex; }
+  .fs-turn-indicator{
+    text-align:left; font-family:Georgia,serif; font-weight:700;
+    font-size:1.15rem; color:var(--gold); display:flex; align-items:center;
+  }
+  .fs-exit-btn{ flex-shrink:0; white-space:nowrap; }
   .panel{
     background:var(--panel-bg);
     border:1px solid rgba(217,164,65,0.35);
@@ -296,12 +311,14 @@
         <button class="ghost" id="fsToggleBtn" style="width:100%;margin-top:8px;">⛶ Mode plein écran (plateau + dés)</button>
       </div>
 
-      <div class="fs-turn-indicator" id="fsTurnIndicator"></div>
+      <div class="fs-header-row">
+        <div class="fs-turn-indicator" id="fsTurnIndicator"></div>
+        <button class="ghost fs-exit-btn" id="fsExitBtn">✕ Quitter le plein écran</button>
+      </div>
       <div class="board-wrap">
         <svg id="board" viewBox="0 0 600 600" width="600" height="600"></svg>
         <div class="dice-tray" id="diceZone"></div>
       </div>
-      <button class="ghost fs-exit-btn" id="fsExitBtn">✕ Quitter le plein écran</button>
 
       <div class="panel" id="logPanel" style="display:none;">
         <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" id="logToggleHeader">
