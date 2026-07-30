@@ -59,6 +59,31 @@
     .board-wrap{margin:0 -4px;}
   }
   .log-collapsed .log{display:none;}
+
+  /* Mode plein écran : ne montre que le plateau, les dés, et à qui le tour */
+  body.fs-mode header.top,
+  body.fs-mode .footer-note,
+  body.fs-mode #authPanel,
+  body.fs-mode #modeSwitchPanel,
+  body.fs-mode #setupPanel,
+  body.fs-mode #onlinePanel,
+  body.fs-mode #sponsorStatusPanel,
+  body.fs-mode #tournamentPanel,
+  body.fs-mode #gamePanel,
+  body.fs-mode #logPanel { display:none !important; }
+  body.fs-mode .app{ padding:10px; max-width:none; }
+  body.fs-mode .layout{ grid-template-columns:1fr; gap:0; }
+  body.fs-mode .board-wrap{
+    min-height:calc(100vh - 40px); display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+  }
+  .fs-turn-indicator{
+    display:none; text-align:center; font-family:Georgia,serif; font-weight:700;
+    font-size:1.25rem; color:var(--gold); margin-bottom:10px;
+  }
+  body.fs-mode .fs-turn-indicator{ display:block; }
+  .fs-exit-btn{ display:none; position:fixed; top:12px; right:12px; z-index:95; }
+  body.fs-mode .fs-exit-btn{ display:inline-block; }
   .panel{
     background:var(--panel-bg);
     border:1px solid rgba(217,164,65,0.35);
@@ -173,7 +198,7 @@
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
       <span class="user-bar" id="userBar"></span>
       <button class="ghost" id="helpBtn">Règles &amp; hypothèses</button>
-      <button class="ghost" id="adminBtn" title="Réservé aux comptes administrateur">⚙ Administration</button>
+      <button class="ghost" id="adminBtn" title="Réservé aux comptes administrateur" style="display:none;">⚙ Administration</button>
       <button class="ghost" id="logoutBtn" style="display:none;">Déconnexion</button>
     </div>
   </header>
@@ -268,12 +293,15 @@
           <button class="ghost" id="soundTestBtn" title="Tester le son directement">🔈 Tester</button>
         </div>
         <p class="help-text" id="turnHint"></p>
+        <button class="ghost" id="fsToggleBtn" style="width:100%;margin-top:8px;">⛶ Mode plein écran (plateau + dés)</button>
       </div>
 
+      <div class="fs-turn-indicator" id="fsTurnIndicator"></div>
       <div class="board-wrap">
         <svg id="board" viewBox="0 0 600 600" width="600" height="600"></svg>
         <div class="dice-tray" id="diceZone"></div>
       </div>
+      <button class="ghost fs-exit-btn" id="fsExitBtn">✕ Quitter le plein écran</button>
 
       <div class="panel" id="logPanel" style="display:none;">
         <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" id="logToggleHeader">
@@ -921,6 +949,7 @@ function setAuthStatus(msg){ const el=document.getElementById("authStatus"); if(
 function refreshUserBar(){
   const bar = document.getElementById("userBar");
   const logoutBtn = document.getElementById("logoutBtn");
+  const adminBtn = document.getElementById("adminBtn");
   if(currentUser){
     bar.innerHTML = `${currentUser.email} ${currentProfile? `<span class="role-badge">${currentProfile.role}</span>`:""}`;
     logoutBtn.style.display="inline-block";
@@ -931,6 +960,7 @@ function refreshUserBar(){
     bar.innerHTML = "";
     logoutBtn.style.display="none";
   }
+  if(adminBtn) adminBtn.style.display = (currentProfile && currentProfile.role==="admin") ? "inline-block" : "none";
 }
 
 function showGameUi(){
@@ -1439,6 +1469,29 @@ document.getElementById("soundTestBtn").addEventListener("click", (e)=>{
   soundEnabled = wasEnabled;
 });
 
+// Mode plein écran : n'affiche que le plateau, les dés, et à qui le tour.
+// Repose sur une classe CSS (fonctionne partout, y compris Safari iOS où
+// l'API Fullscreen native est limitée), avec l'API Fullscreen en bonus
+// quand le navigateur la supporte pour de vrai (masque aussi la barre du navigateur).
+function setFullscreenMode(active){
+  document.body.classList.toggle("fs-mode", active);
+  try{
+    if(active){
+      const el = document.documentElement;
+      if(el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+      else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    } else if(document.fullscreenElement){
+      if(document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+      else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+  }catch(e){ /* API non disponible : la classe CSS suffit à assurer le mode épuré */ }
+}
+document.getElementById("fsToggleBtn").addEventListener("click", ()=> setFullscreenMode(true));
+document.getElementById("fsExitBtn").addEventListener("click", ()=> setFullscreenMode(false));
+document.addEventListener("fullscreenchange", ()=>{
+  if(!document.fullscreenElement) document.body.classList.remove("fs-mode");
+});
+
 /* =========================================================================
    Son des dés — bruit de dés lancés/roulés sur du verre, généré en direct
    avec la Web Audio API (aucun fichier audio externe, donc rien à charger
@@ -1904,6 +1957,10 @@ function renderTurnBanner(){
   const onlineWho = (online && online.seatsMeta[c]) ? ` — ${online.seatsMeta[c].name}` : "";
   el.innerHTML = `<div class="swatch" style="background:${COLOR_HEX[c]}"></div>
     <div>Tour de <b>${COLOR_LABEL[c]}</b> ${state.seats[c]==='bot'?'(Ordinateur)':''}${onlineWho} — dés: ${state.diceMode}</div>`;
+  const fsEl = document.getElementById("fsTurnIndicator");
+  if(fsEl){
+    fsEl.innerHTML = `<span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${COLOR_HEX[c]};vertical-align:middle;margin-right:8px;"></span>Tour de ${COLOR_LABEL[c]}${state.seats[c]==='bot'?' (Ordinateur)':''}`;
+  }
   document.getElementById("turnHint").textContent =
     online && !isMyTurnOnline() ? "En attente du joueur qui contrôle cette couleur…" :
     state.phase==="idle" ? "Cliquez sur « Lancer le(s) dé(s) »." :
