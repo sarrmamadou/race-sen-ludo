@@ -1,0 +1,2470 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RACE-SEN-LUDO</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg-deep:#0d2b26;
+    --bg-deep-2:#123a33;
+    --sand:#f3e6c9;
+    --ink:#1c1410;
+    --red:#d1361f;
+    --green:#1f7a3d;
+    --yellow:#e8b923;
+    --blue:#1f5fa8;
+    --wax-line:#8a5a2b;
+    --gold:#d9a441;
+    --panel-bg:rgba(243,230,201,0.06);
+    --radius:14px;
+    font-family:"Rubik", "Segoe UI", sans-serif;
+  }
+  @font-face{
+    font-family:"Rubik";
+    src:local("Arial");
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 10%, #164a41 0%, transparent 45%),
+      radial-gradient(circle at 90% 85%, #17352f 0%, transparent 40%),
+      var(--bg-deep);
+    color:var(--sand);
+  }
+  h1,h2,h3{font-family:"Georgia", "Times New Roman", serif; letter-spacing:0.5px; margin:0;}
+  .app{max-width:1180px;margin:0 auto;padding:22px 16px 60px;}
+  header.top{
+    display:flex;align-items:center;justify-content:space-between;
+    border-bottom:3px solid var(--gold);
+    padding-bottom:14px;margin-bottom:18px;flex-wrap:wrap;gap:10px;
+  }
+  header.top .brand{display:flex;align-items:center;gap:14px;}
+  header.top .brand .mark{
+    width:46px;height:46px;border-radius:50%;
+    background:conic-gradient(var(--red) 0 25%, var(--yellow) 25% 50%, var(--green) 50% 75%, var(--blue) 75% 100%);
+    border:3px solid var(--sand);
+  }
+  header.top h1{font-size:1.55rem;color:var(--sand);letter-spacing:1px;}
+  header.top .tag{font-size:0.78rem;opacity:0.75;letter-spacing:1.5px;text-transform:uppercase;}
+  .layout{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:22px;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+  .panel{
+    background:var(--panel-bg);
+    border:1px solid rgba(217,164,65,0.35);
+    border-radius:var(--radius);
+    padding:16px 16px 18px;
+    margin-bottom:16px;
+  }
+  .panel h3{color:var(--gold);font-size:1.02rem;margin-bottom:10px;border-bottom:1px dashed rgba(217,164,65,0.4);padding-bottom:6px;}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px;font-size:0.88rem;}
+  .row label{opacity:0.9;}
+  select,input[type=text],input[type=url],input[type=password],input[type=email]{
+    background:#0e2a26;color:var(--sand);border:1px solid rgba(217,164,65,0.4);
+    border-radius:8px;padding:5px 8px;font-size:0.85rem;max-width:170px;
+  }
+  #authEmail,#authPassword,#admCell,#admBoard,#admCenter{max-width:none;width:100%;}
+  .user-bar{font-size:0.78rem;opacity:0.85;display:flex;align-items:center;gap:6px;}
+  .role-badge{background:var(--gold);color:#231705;border-radius:6px;padding:1px 6px;font-size:0.68rem;font-weight:700;text-transform:uppercase;}
+  button{
+    cursor:pointer;font-family:inherit;border:none;border-radius:9px;
+    padding:8px 14px;font-weight:600;font-size:0.88rem;transition:transform .08s ease, filter .15s ease;
+  }
+  button:hover{filter:brightness(1.12);}
+  button:active{transform:scale(0.96);}
+  button.primary{background:var(--gold);color:#231705;}
+  button.ghost{background:transparent;border:1px solid var(--gold);color:var(--gold);}
+  button:disabled{opacity:0.35;cursor:not-allowed;filter:none;transform:none;}
+  .seat{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .seat .dot{width:14px;height:14px;border-radius:50%;flex:0 0 auto;}
+  .seat span.name{width:58px;font-size:0.85rem;}
+  .turn-banner{
+    display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;
+    background:rgba(0,0,0,0.25);margin-bottom:12px;font-size:0.95rem;
+  }
+  .turn-banner .swatch{width:20px;height:20px;border-radius:6px;border:2px solid var(--sand);}
+  .dice-tray{
+    display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:center;
+    margin-top:16px;padding:14px 18px;min-height:40px;
+    background:linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0.12));
+    border-radius:14px;border:1px solid rgba(217,164,65,0.3);
+  }
+  .pip-die{
+    width:58px;height:58px;border-radius:12px;background:var(--sand);
+    display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+    padding:9px;border:2px solid var(--gold);
+    box-shadow:0 4px 0 rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.05);
+  }
+  .pip-die.rolling{ animation: diceTumble 0.14s linear infinite; }
+  @keyframes diceTumble{
+    0%{ transform: rotate(0deg) scale(1); }
+    50%{ transform: rotate(-14deg) scale(0.94); }
+    100%{ transform: rotate(10deg) scale(1.02); }
+  }
+  .pip-die.used{opacity:0.3;}
+  .pip-die.pickable{cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,0.35), 0 0 0 3px #fff;}
+  .pip-die .pip{width:9px;height:9px;border-radius:50%;background:var(--ink);margin:auto;opacity:0;}
+  .pip-die .pip.on{opacity:1;}
+  .board-wrap{display:flex;flex-direction:column;align-items:center;}
+  #board{background:var(--sand);border-radius:16px;border:6px solid var(--wax-line);
+    box-shadow:0 12px 30px rgba(0,0,0,0.45);max-width:100%;height:auto;}
+  .pawn-choice-cell{cursor:pointer;}
+  .log{max-height:170px;overflow-y:auto;font-size:0.78rem;line-height:1.5;opacity:0.9;}
+  .log div{border-bottom:1px dotted rgba(217,164,65,0.25);padding:2px 0;}
+  .help-text{font-size:0.78rem;opacity:0.75;line-height:1.45;}
+  .choice-modal{
+    position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:50;
+  }
+  .choice-arrow-halo{ animation: choicePulse 1s ease-in-out infinite; transform-origin:center; transform-box:fill-box; }
+  @keyframes choicePulse{
+    0%{ transform:scale(1); opacity:0.85; }
+    50%{ transform:scale(1.22); opacity:1; }
+    100%{ transform:scale(1); opacity:0.85; }
+  }
+  .choice-box{background:var(--bg-deep-2);border:2px solid var(--gold);border-radius:14px;padding:20px;max-width:340px;text-align:center;}
+  .choice-box h3{color:var(--gold);margin-bottom:10px;}
+  .choice-box button{display:block;width:100%;margin-bottom:8px;}
+  .winner-banner{
+    position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:60;
+  }
+  .winner-box{background:var(--bg-deep-2);border:3px solid var(--gold);border-radius:16px;padding:30px 40px;text-align:center;}
+  .winner-box h2{color:var(--gold);font-size:2rem;margin-bottom:14px;}
+  #fxLayer{position:fixed;inset:0;pointer-events:none;z-index:85;overflow:hidden;}
+  .fx-spark{position:absolute;width:8px;height:8px;border-radius:50%;}
+  @keyframes fxSparkFly{ to{ transform:translate(var(--dx),var(--dy)) scale(0.2); opacity:0; } }
+  .fx-text{position:absolute;left:50%;top:30%;transform:translate(-50%,-50%);
+    font-family:Georgia,serif;font-weight:800;font-size:2.1rem;color:#fff8e0;
+    text-shadow:0 3px 10px rgba(0,0,0,0.6), 0 0 16px var(--gold);white-space:nowrap;}
+  @keyframes fxFloatUpFade{
+    0%{opacity:0; transform:translate(-50%,-25%) scale(0.7);}
+    20%{opacity:1; transform:translate(-50%,-55%) scale(1.12);}
+    100%{opacity:0; transform:translate(-50%,-95%) scale(1);}
+  }
+  .fx-confetti{position:absolute;top:-20px;width:10px;height:15px;opacity:0.95;}
+  @keyframes fxConfettiFall{ to{ transform:translateY(112vh) rotate(var(--rot)); opacity:0.15; } }
+  .fx-balloon{position:absolute;bottom:-60px;width:36px;height:46px;border-radius:50% 50% 46% 46%/60% 60% 40% 40%;
+    box-shadow:inset -6px -6px 10px rgba(0,0,0,0.18), inset 6px 6px 10px rgba(255,255,255,0.25);}
+  .fx-balloon::after{content:"";position:absolute;left:50%;bottom:-22px;width:1px;height:22px;background:rgba(255,255,255,0.5);}
+  @keyframes fxBalloonRise{ to{ transform:translateY(-130vh) translateX(var(--drift)); opacity:0; } }
+  .footer-note{margin-top:24px;font-size:0.75rem;opacity:0.55;text-align:center;}
+  input[type=file]{font-size:0.75rem;color:var(--sand);max-width:170px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="mark"></div>
+      <div>
+        <h1>RACE-SEN-LUDO</h1>
+        <div class="tag">Barrage · Invasion · Sponsoring</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <span class="user-bar" id="userBar"></span>
+      <button class="ghost" id="helpBtn">Règles &amp; hypothèses</button>
+      <button class="ghost" id="adminBtn" title="Réservé aux comptes administrateur">⚙ Administration</button>
+      <button class="ghost" id="logoutBtn" style="display:none;">Déconnexion</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div>
+      <div class="panel" id="authPanel">
+        <h3>Compte joueur</h3>
+        <div class="row"><label>Email</label></div>
+        <input type="email" id="authEmail" placeholder="vous@exemple.com" style="margin-bottom:8px;">
+        <div class="row"><label>Mot de passe</label></div>
+        <input type="password" id="authPassword" placeholder="8 caractères minimum" style="margin-bottom:10px;">
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button class="primary" id="signInBtn" style="flex:1;">Connexion</button>
+          <button class="ghost" id="signUpBtn" style="flex:1;">Créer un compte</button>
+        </div>
+        <button class="ghost" id="guestBtn" style="width:100%;">Continuer en invité (sans historique)</button>
+        <p class="help-text" id="authStatus"></p>
+      </div>
+
+      <div class="panel" id="modeSwitchPanel" style="display:none;">
+        <div style="display:flex;gap:8px;">
+          <button class="primary" id="modeLocalBtn" style="flex:1;">🎲 Partie locale</button>
+          <button class="ghost" id="modeOnlineBtn" style="flex:1;">🌐 Partie en ligne</button>
+        </div>
+      </div>
+
+      <div class="panel" id="setupPanel" style="display:none;">
+        <h3>Configuration de la partie</h3>
+        <div id="seatsList"></div>
+        <div class="row">
+          <label>Mode de dé</label>
+          <select id="diceMode">
+            <option value="1">1 dé</option>
+            <option value="2">2 dés</option>
+          </select>
+        </div>
+        <button class="primary" id="startBtn" style="width:100%;margin-top:8px;">Démarrer la partie</button>
+      </div>
+
+      <div class="panel" id="onlinePanel" style="display:none;">
+        <h3>🌐 Jouer en ligne</h3>
+        <div id="onlineSetup">
+          <button class="primary" id="createRoomBtn" style="width:100%;margin-bottom:8px;">Créer un salon</button>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="joinCodeInput" placeholder="Code du salon" style="flex:1;">
+            <button class="ghost" id="joinRoomBtn">Rejoindre</button>
+          </div>
+        </div>
+        <div id="onlineRoom" style="display:none;">
+          <p class="help-text">Code du salon : <b id="roomCodeDisplay"></b> — partagez-le aux autres joueurs.</p>
+          <div id="seatClaims"></div>
+          <div class="row">
+            <label>Mode de dé</label>
+            <select id="onlineDiceMode">
+              <option value="1">1 dé</option>
+              <option value="2">2 dés</option>
+            </select>
+          </div>
+          <button class="primary" id="onlineStartBtn" style="width:100%;margin-top:8px;display:none;">Démarrer la partie en ligne</button>
+          <button class="ghost" id="leaveRoomBtn" style="width:100%;margin-top:6px;">Quitter le salon</button>
+        </div>
+      </div>
+
+      <div class="panel" id="sponsorStatusPanel">
+        <h3>Habillage sponsor</h3>
+        <p class="help-text" id="sponsorStatusText">Chargement de la configuration…</p>
+        <div id="playlistUi" style="display:none;margin-top:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="ghost" id="playlistToggle">▶</button>
+            <span class="help-text" id="playlistTrackName" style="flex:1;"></span>
+            <button class="ghost" id="playlistNext">⏭</button>
+          </div>
+          <audio id="playlistAudio" style="display:none;"></audio>
+        </div>
+      </div>
+
+      <div class="panel" id="tournamentPanel" style="display:none;">
+        <h3>🏆 Tournoi du mois</h3>
+        <div id="tournamentInfo" class="help-text"></div>
+        <div id="tournamentLeaderboard" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="panel" id="gamePanel" style="display:none;">
+        <h3>Tour de jeu</h3>
+        <div class="turn-banner" id="turnBanner"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="primary" id="rollBtn" style="flex:1;">🎲 Lancer le(s) dé(s)</button>
+          <button class="ghost" id="soundToggle" title="Couper/activer le son des dés">🔊</button>
+          <button class="ghost" id="soundTestBtn" title="Tester le son directement">🔈 Tester</button>
+        </div>
+        <p class="help-text" id="turnHint"></p>
+      </div>
+
+      <div class="panel" id="logPanel" style="display:none;">
+        <h3>Journal</h3>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="board-wrap">
+        <svg id="board" viewBox="0 0 600 600" width="600" height="600"></svg>
+        <div class="dice-tray" id="diceZone"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">RACE-SEN-LUDO — jouez sur ludo.sn ou race-senegal.sn — historique des parties, habillage sponsor et tournois.<br>© 2026 R.A.C.E - Tous droits réservés</div>
+</div>
+
+<div id="modalRoot"></div>
+<div id="fxLayer"></div>
+
+<script>
+/* =========================================================================
+   RACE-SEN-LUDO — moteur de jeu
+   ========================================================================= */
+
+const COLORS = ["green","yellow","blue","red"];
+const COLOR_HEX = {red:"#d1361f", green:"#1f7a3d", yellow:"#e8b923", blue:"#1f5fa8"};
+const COLOR_LABEL = {red:"Rouge", green:"Vert", yellow:"Jaune", blue:"Bleu"};
+const CELL = 40; // px per grid unit (15x15 grid -> 600x600)
+
+// ---- 52-cell shared loop coordinates (row, col), 0-indexed ----
+const PATH_COORDS = [
+  [6,1],[6,2],[6,3],[6,4],[6,5],
+  [5,6],[4,6],[3,6],[2,6],[1,6],[0,6],
+  [0,7],
+  [0,8],
+  [1,8],[2,8],[3,8],[4,8],[5,8],
+  [6,9],[6,10],[6,11],[6,12],[6,13],[6,14],
+  [7,14],
+  [8,14],
+  [8,13],[8,12],[8,11],[8,10],[8,9],
+  [9,8],[10,8],[11,8],[12,8],[13,8],[14,8],
+  [14,7],
+  [14,6],
+  [13,6],[12,6],[11,6],[10,6],[9,6],
+  [8,5],[8,4],[8,3],[8,2],[8,1],[8,0],
+  [7,0],
+  [6,0]
+];
+const START_INDEX = {red:0, green:13, yellow:26, blue:39};
+// junction cell just before a color turns into its own home column
+const TURN_INDEX = {}; // case commune juste devant la 1ère case du couloir final de chaque couleur
+COLORS.forEach(c => TURN_INDEX[c] = (START_INDEX[c] - 2 + 52) % 52);
+
+const HOME_COLUMN = {
+  red:    [[7,1],[7,2],[7,3],[7,4],[7,5]],
+  green:  [[1,7],[2,7],[3,7],[4,7],[5,7]],
+  yellow: [[7,13],[7,12],[7,11],[7,10],[7,9]],
+  blue:   [[13,7],[12,7],[11,7],[10,7],[9,7]]
+};
+const YARD_SLOTS = {
+  red:    [[1,1],[1,4],[4,1],[4,4]],
+  green:  [[1,10],[1,13],[4,10],[4,13]],
+  yellow: [[10,10],[10,13],[13,10],[13,13]],
+  blue:   [[10,1],[10,4],[13,1],[13,4]]
+};
+const YARD_BOX = { red:[0,0], green:[0,9], yellow:[9,9], blue:[9,0] }; // coin haut-gauche (en cases) de chaque bercail 6x6
+const START_CELL_INDEXES = new Set(Object.values(START_INDEX)); // cases de départ : capture possible seulement via un six
+
+function globalIndex(color, progress){ // progress 1..51 -> global loop index
+  return (START_INDEX[color] + progress - 1) % 52;
+}
+function progressFromGlobal(color, idx){ // inverse
+  return ((idx - START_INDEX[color] + 52) % 52) + 1;
+}
+
+// ---- Game state ----
+let state = null;
+let sponsorCfg = { cellImg:"", boardImg:"", centerImg:"", playlist:[], cellImages:{}, yardImages:{} };
+
+function freshPawn(color, id){
+  return { color, id, state:"yard", progress:0, invade:null, capturedBy:null };
+  // state: yard | path | homecol | finished | invading | captured
+  // progress: for 'path' = 1..51 ; for 'homecol' = 1..5 (depth) ; for invading, use invade{}
+  // invade: {of: color being invaded, depth: 1..5}
+  // capturedBy: couleur du capteur, tant que state==="captured" (prisonnier dans son bercail)
+}
+
+function newGame(seats, diceMode){
+  const pawns = [];
+  COLORS.forEach(c => { for(let i=0;i<4;i++) pawns.push(freshPawn(c,i)); });
+  const active = COLORS.filter(c => seats[c] !== "off");
+  return {
+    seats, diceMode, pawns, active,
+    turnOrder: active,
+    turnIdx: 0,
+    dice: [], // remaining unused die values this roll
+    diceHistory: [], // full set rolled this roll-batch (for six detection)
+    sixStreak: 0, // consecutive sixes within this player's turn chain (used for barrage passage)
+    bonusChainCount: 0,
+    sixesRolledThisChain: 0, // total de faces "6" obtenues ce tour (jamais décrémenté) — règle des 6 six
+    phase: "idle", // idle | rolled | choosing
+    pendingChoice: null,
+    winner: null,
+    log: [],
+    gameId: null,
+    moveSeq: 0
+  };
+}
+
+function currentColor(){ return state.turnOrder[state.turnIdx]; }
+function pawnsOf(color){ return state.pawns.filter(p=>p.color===color); }
+function logMsg(msg){
+  state.log.unshift(msg);
+  renderLog();
+}
+
+// ---- Cell occupancy helpers ----
+function cellKey(p){
+  if(p.state==="yard") return "yard:"+p.color;
+  if(p.state==="finished") return "home";
+  if(p.state==="path") return "path:"+globalIndex(p.color,p.progress);
+  if(p.state==="homecol") return "homecol:"+p.color+":"+p.progress;
+  if(p.state==="invading") return "homecol:"+p.invade.of+":"+p.invade.depth;
+  if(p.state==="captured") return "prisonyard:"+p.capturedBy; // prisonnier : dans le bercail du capteur
+  return "?";
+}
+function pawnsAtKey(key, excludeId){
+  return state.pawns.filter(p => p!==excludeId && cellKey(p)===key);
+}
+function stackInfo(key){
+  // les prisonniers ("captured") ne comptent jamais pour un barrage : ils sont inertes.
+  const occ = state.pawns.filter(p=>cellKey(p)===key && p.state!=="yard" && p.state!=="finished" && p.state!=="captured");
+  if(occ.length===0) return null;
+  const color = occ[0].color;
+  const sameColor = occ.filter(p=>p.color===color);
+  return { color, count: sameColor.length, pawns: sameColor };
+}
+
+// ---- Move computation ----
+// Returns array of possible "moves" for a pawn given a die value.
+// Each move: {type:'enter'|'advance'|'finish'|'invadeEnter'|'invadeAdvance'|'retreat', ...}
+function possibleMovesForPawn(p, die){
+  const moves = [];
+  if(state.pawns[0]===undefined) return moves;
+
+  if(p.state==="yard"){
+    if(die===6){
+      const idx = START_INDEX[p.color];
+      const blocked = isBlockedForOpponent(idx, p.color);
+      if(!blocked.blocked) moves.push({type:"enter"});
+    }
+    return moves;
+  }
+
+  if(p.state==="finished") return moves;
+
+  if(p.state==="captured"){
+    if(die===6) moves.push({type:"release"});
+    return moves;
+  }
+
+  if(p.state==="invading"){
+    if(die===6){
+      moves.push({type:"retreat"});
+    } else {
+      const newDepth = p.invade.depth + die;
+      if(newDepth<=5){
+        // le barrage bloque le passage sur TOUTE case traversée à l'intérieur du couloir envahi,
+        // pas seulement la case d'arrivée — même règle que sur le chemin commun.
+        let blocked=false;
+        for(let d=p.invade.depth+1; d<=newDepth; d++){
+          const st = stackInfo("homecol:"+p.invade.of+":"+d);
+          if(st && st.color!==p.color && st.count>=2 && state.sixStreak < st.count){ blocked=true; break; }
+        }
+        if(!blocked) moves.push({type:"invadeAdvance", newDepth});
+      }
+    }
+    return moves;
+  }
+
+  if(p.state==="homecol"){
+    const newDepth = p.progress + die;
+    if(newDepth===6) moves.push({type:"finish"});
+    else if(newDepth<6){
+      // own home column, only own pawns ever here besides invaders (handled separately); no block from self
+      // newProgress encodé en absolu (>51) pour rester cohérent avec applyMove, qui sinon
+      // réinterprète une petite valeur comme une position sur le chemin commun (bug corrigé).
+      moves.push({type:"advance", newProgress:51+newDepth});
+    }
+    return moves;
+  }
+
+  if(p.state==="path"){
+    const curIdx = globalIndex(p.color, p.progress);
+    const newProgress = p.progress + die;
+
+    // Option A: normal continuation on loop or into own home column
+    if(newProgress<=51){
+      // check path cells crossed (p.progress+1 .. newProgress) for barrages of other colors
+      let blocked=false, blockedBy=null;
+      for(let s=p.progress+1;s<=newProgress;s++){
+        const idx = globalIndex(p.color, s);
+        const st = stackInfo("path:"+idx);
+        if(st && st.color!==p.color && st.count>=2){
+          if(state.sixStreak < st.count){ blocked=true; blockedBy=st; break; }
+        }
+      }
+      // Une case de départ ne peut être "prise" (capture) que par un six — sinon le
+      // pion adverse seul présent reste protégé et le mouvement n'est pas autorisé.
+      if(!blocked && die!==6){
+        const finalIdx = globalIndex(p.color, newProgress);
+        if(START_CELL_INDEXES.has(finalIdx)){
+          const stFinal = stackInfo("path:"+finalIdx);
+          if(stFinal && stFinal.color!==p.color) blocked = true;
+        }
+      }
+      if(!blocked) moves.push({type:"advance", newProgress});
+    } else {
+      // goes into own home column (progress 52..56) or finish(57)
+      const depth = newProgress-51; // 1..
+      // still must cross remaining loop cells up to 51 first
+      let blocked=false;
+      for(let s=p.progress+1;s<=51;s++){
+        const idx = globalIndex(p.color, s);
+        const st = stackInfo("path:"+idx);
+        if(st && st.color!==p.color && st.count>=2 && state.sixStreak < st.count){ blocked=true; break; }
+      }
+      if(!blocked){
+        if(depth<=5) moves.push({type:"advance", newProgress}); // will be interpreted as entering home column
+        else if(depth===6) moves.push({type:"finish"});
+        // depth>6 => overshoot, invalid (must land exactly)
+
+        // Choix possible : poursuivre encore sur le chemin commun (un tour de plus)
+        // au lieu de rentrer dans son couloir final pour finir la course.
+        let blockedLoop=false;
+        for(let s=p.progress+1;s<=newProgress;s++){
+          const wp = ((s-1)%51)+1;
+          const idx2 = globalIndex(p.color, wp);
+          const st2 = stackInfo("path:"+idx2);
+          if(st2 && st2.color!==p.color && st2.count>=2 && state.sixStreak < st2.count){ blockedLoop=true; break; }
+        }
+        if(!blockedLoop){
+          const wrappedProgress = ((newProgress-1)%51)+1;
+          moves.push({type:"continueLoop", newProgress:wrappedProgress});
+        }
+      }
+    }
+
+    // Option B: invasion — if sitting exactly on another color's turn-junction cell
+    COLORS.forEach(other=>{
+      if(other===p.color) return;
+      if(curIdx===TURN_INDEX[other] && die<=5){
+        let blocked=false;
+        for(let d=1; d<=die; d++){
+          const st = stackInfo("homecol:"+other+":"+d);
+          if(st && st.color!==p.color && st.count>=2 && state.sixStreak < st.count){ blocked=true; break; }
+        }
+        if(!blocked) moves.push({type:"invadeEnter", of:other, depth:die});
+      }
+    });
+
+    // Si envahir est la SEULE option possible (le chemin normal est bloqué par un
+    // barrage), on ne force pas le joueur : il peut refuser et sacrifier ce dé.
+    if(moves.length===1 && moves[0].type==="invadeEnter"){
+      moves.push({type:"declineInvade"});
+    }
+
+    return moves;
+  }
+  return moves;
+}
+
+function isBlockedForOpponent(globalIdx, movingColor){
+  const st = stackInfo("path:"+globalIdx);
+  if(st && st.color!==movingColor && st.count>=2 && state.sixStreak < st.count){
+    return {blocked:true, by:st};
+  }
+  return {blocked:false};
+}
+
+function anyValidMove(){
+  for(const p of pawnsOf(currentColor())){
+    for(const d of uniqueDice()){
+      if(possibleMovesForPawn(p,d).length>0) return true;
+    }
+  }
+  return false;
+}
+function uniqueDice(){ return [...new Set(state.dice)]; }
+
+// ---- Applying a move ----
+function applyMove(p, die, move){
+  const color = p.color;
+  if(move.type==="enter"){
+    p.state="path"; p.progress=1;
+    captureAt("path:"+globalIndex(color,1), p);
+    playExitSuccessSound();
+    logMsg(`${COLOR_LABEL[color]} sort un pion (6) — damal nélawi !`);
+  } else if(move.type==="advance"){
+    if(move.newProgress<=51){
+      p.progress = move.newProgress;
+      p.state="path";
+      captureAt("path:"+globalIndex(color,p.progress), p);
+    } else {
+      const depth = move.newProgress-51;
+      p.state="homecol"; p.progress=depth;
+      captureAt("homecol:"+color+":"+depth, p);
+    }
+    logMsg(`${COLOR_LABEL[color]} avance de ${die}.`);
+  } else if(move.type==="finish"){
+    p.state="finished"; p.progress=57; p.invade=null;
+    logMsg(`${COLOR_LABEL[color]} rentre un pion à la maison !`);
+  } else if(move.type==="invadeEnter"){
+    p.state="invading"; p.invade={of:move.of, depth:move.depth};
+    captureAt("homecol:"+move.of+":"+move.depth, p);
+    logMsg(`${COLOR_LABEL[color]} envahit la maison de ${COLOR_LABEL[move.of]} !`);
+  } else if(move.type==="invadeAdvance"){
+    p.invade.depth = move.newDepth;
+    captureAt("homecol:"+p.invade.of+":"+p.invade.depth, p);
+    logMsg(`${COLOR_LABEL[color]} progresse dans la maison ennemie.`);
+  } else if(move.type==="retreat"){
+    p.invade.depth -= 1;
+    if(p.invade.depth<=0){
+      const of = p.invade.of;
+      p.invade=null;
+      p.state="path";
+      p.progress = progressFromGlobal(color, TURN_INDEX[of]);
+      logMsg(`${COLOR_LABEL[color]} ressort de la maison ennemie (double-six requis fait).`);
+    } else {
+      logMsg(`${COLOR_LABEL[color]} recule d'une case (six) dans la maison ennemie.`);
+    }
+  } else if(move.type==="continueLoop"){
+    p.progress = move.newProgress;
+    p.state="path";
+    captureAt("path:"+globalIndex(color,p.progress), p);
+    logMsg(`${COLOR_LABEL[color]} choisit de poursuivre sur le chemin commun au lieu d'entrer dans son couloir.`);
+  } else if(move.type==="declineInvade"){
+    logMsg(`${COLOR_LABEL[color]} refuse d'envahir la maison ennemie — ce dé est sacrifié.`);
+  } else if(move.type==="release"){
+    p.state="yard"; p.progress=0; p.capturedBy=null;
+    logMsg(`⛓️ Prison, ${COLOR_LABEL[color]}, Libéré !`);
+    speakPhrase(`Prison, ${COLOR_LABEL[color]}, Libéré !`);
+    spawnFloatingText(`Prison, ${COLOR_LABEL[color]}, Libéré !`);
+  }
+  if(move.type==="finish"){
+    celebrateMoveSuccess();
+  }
+  const recentLogs = state.log.slice(0,2).reverse();
+  logMoveToSupabase(color, die, move, recentLogs);
+  checkWin();
+}
+
+function captureAt(key, mover){
+  const occ = state.pawns.filter(p => p!==mover && cellKey(p)===key && p.state!=="captured");
+  if(occ.length===0) return;
+  // Aucune case n'est protégée par défaut (règle RACE-SEN-LUDO) : une capture est
+  // possible même sur la case de départ d'une couleur, tant que le pion visé est seul.
+  // Exception : une case personnalisée par le sponsor (image spécifique définie par
+  // l'admin) devient une case protégée — aucune capture n'y est jamais possible.
+  if(key.startsWith("path:")){
+    const idx = parseInt(key.split(":")[1],10);
+    if((sponsorCfg.cellImages||{})[idx]) return;
+  }
+  const other = occ[0];
+  if(other.color===mover.color) return; // stacking, not capture
+  const sameColorGroup = occ.filter(p=>p.color===other.color);
+  const captorColor = mover.color; // le prisonnier est emmené dans le bercail du capteur
+  if(sameColorGroup.length>=2){
+    // it's a barrage the mover already passed the six-check to reach; breaking it makes prisoners
+    sameColorGroup.forEach(p=>{ p.state="captured"; p.capturedBy=captorColor; p.invade=null; });
+    logMsg(`💥 Barrage de ${COLOR_LABEL[other.color]} brisé — pions emmenés prisonniers au bercail de ${COLOR_LABEL[captorColor]} !`);
+    state.sixStreak = Math.max(0, state.sixStreak - sameColorGroup.length);
+  } else {
+    sameColorGroup.forEach(p=>{ p.state="captured"; p.capturedBy=captorColor; p.invade=null; });
+    logMsg(`✂️ ${COLOR_LABEL[mover.color]} capture un pion ${COLOR_LABEL[other.color]} et l'emmène prisonnier dans son bercail !`);
+  }
+}
+
+// Score de progression approximatif d'une couleur (pour classer les non-gagnants) :
+// bercail=0, chemin=1..51, couloir final=52..56, arrivé=57, envahisseur≈51, prisonnier=0.
+function colorProgressScore(c){
+  return pawnsOf(c).reduce((sum,p)=>{
+    if(p.state==="finished") return sum+57;
+    if(p.state==="homecol") return sum+51+p.progress;
+    if(p.state==="path") return sum+p.progress;
+    if(p.state==="invading") return sum+51;
+    return sum; // yard, captured
+  },0);
+}
+function computeFinalRanking(){
+  const active = state.active;
+  const ranked = active.slice().sort((a,b)=>{
+    if(a===state.winner) return -1;
+    if(b===state.winner) return 1;
+    return colorProgressScore(b)-colorProgressScore(a);
+  });
+  return ranked;
+}
+
+function checkWin(){
+  COLORS.forEach(c=>{
+    if(!state.winner && pawnsOf(c).every(p=>p.state==="finished")){
+      state.winner = c;
+      updateGameResultInSupabase(c);
+    }
+  });
+}
+
+/* =========================================================================
+   UI / setup
+   ========================================================================= */
+const seatsList = document.getElementById("seatsList");
+COLORS.forEach(c=>{
+  const div = document.createElement("div");
+  div.className="seat";
+  div.innerHTML = `<div class="dot" style="background:${COLOR_HEX[c]}"></div>
+    <span class="name">${COLOR_LABEL[c]}</span>
+    <select data-color="${c}">
+      <option value="human">Humain</option>
+      <option value="bot">Ordinateur</option>
+      <option value="off">${c==='red'||c==='green'?'Inactif':'Inactif'}</option>
+    </select>`;
+  seatsList.appendChild(div);
+});
+// default: red & green human, yellow & blue off
+seatsList.querySelectorAll("select").forEach(sel=>{
+  if(sel.dataset.color==="yellow" || sel.dataset.color==="blue") sel.value="off";
+});
+
+// Épure l'interface une fois la partie lancée : ne garde que le plateau, les dés
+// et le tour de jeu — masque tous les panneaux de configuration/salon.
+function hideSetupPanels(){
+  ["modeSwitchPanel","setupPanel","onlinePanel","sponsorStatusPanel","tournamentPanel"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display="none";
+  });
+}
+
+document.getElementById("startBtn").addEventListener("click", async ()=>{
+  const seats = {};
+  seatsList.querySelectorAll("select").forEach(sel=> seats[sel.dataset.color]=sel.value);
+  const activeCount = Object.values(seats).filter(v=>v!=="off").length;
+  if(activeCount<2){ alert("Choisissez au moins 2 joueurs actifs."); return; }
+  const diceMode = parseInt(document.getElementById("diceMode").value,10);
+  state = newGame(seats, diceMode);
+  document.getElementById("gamePanel").style.display="block";
+  document.getElementById("logPanel").style.display="block";
+  hideSetupPanels();
+  renderAll();
+  await createGameRowInSupabase(seats, diceMode);
+  maybeBotTurn();
+});
+
+document.getElementById("modeLocalBtn").addEventListener("click", ()=>{
+  document.getElementById("setupPanel").style.display="block";
+  document.getElementById("onlinePanel").style.display="none";
+});
+document.getElementById("modeOnlineBtn").addEventListener("click", ()=>{
+  if(!supabaseReady){ alert("Le mode en ligne nécessite le backend Supabase (voir SUPABASE_URL/KEY)."); return; }
+  document.getElementById("setupPanel").style.display="none";
+  document.getElementById("onlinePanel").style.display="block";
+});
+
+/* =========================================================================
+   Mode en ligne — salons en temps réel via Supabase Realtime (broadcast).
+   Chaque salon est un canal nommé par un code à 6 caractères ; les joueurs
+   s'y connectent, réservent une couleur, puis l'état de la partie est
+   rediffusé à tout le salon après chaque action (dé lancé, pion déplacé…).
+   Aucune validation serveur : c'est un canal de confiance entre les
+   participants du salon, comme le veut ce prototype.
+   ========================================================================= */
+let online = null; // { roomCode, channel, isHost, mySeats:Set, seatsMeta:{color:{name}} }
+
+function generateRoomCode(){
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code="";
+  for(let i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+function myDisplayLabel(){
+  return currentUser ? currentUser.email : (isGuest ? "Invité" : "Joueur");
+}
+
+function subscribeOnlineChannel(code){
+  const channel = supabaseClient.channel("race-sen-ludo:"+code);
+  channel.on("broadcast", {event:"seats"}, ({payload})=>{
+    online.seatsMeta = payload.seatsMeta;
+    renderSeatClaims();
+  });
+  channel.on("broadcast", {event:"state"}, ({payload})=>{
+    state = payload;
+    document.getElementById("gamePanel").style.display="block";
+    document.getElementById("logPanel").style.display="block";
+    hideSetupPanels();
+    renderAll();
+  });
+  channel.on("broadcast", {event:"sync_request"}, ()=>{
+    if(online.isHost){
+      channel.send({type:"broadcast", event:"seats", payload:{seatsMeta:online.seatsMeta}});
+      if(state) channel.send({type:"broadcast", event:"state", payload: state});
+    }
+  });
+  channel.subscribe((status)=>{
+    if(status==="SUBSCRIBED" && !online.isHost){
+      channel.send({type:"broadcast", event:"sync_request", payload:{}});
+    }
+  });
+  return channel;
+}
+
+document.getElementById("createRoomBtn").addEventListener("click", ()=>{
+  const code = generateRoomCode();
+  online = { roomCode:code, isHost:true, mySeats:new Set(), seatsMeta:{} };
+  online.channel = subscribeOnlineChannel(code);
+  document.getElementById("onlineSetup").style.display="none";
+  document.getElementById("onlineRoom").style.display="block";
+  document.getElementById("roomCodeDisplay").textContent = code;
+  document.getElementById("onlineStartBtn").style.display="block";
+  renderSeatClaims();
+});
+
+document.getElementById("joinRoomBtn").addEventListener("click", ()=>{
+  const code = document.getElementById("joinCodeInput").value.trim().toUpperCase();
+  if(!code){ alert("Entrez le code du salon."); return; }
+  online = { roomCode:code, isHost:false, mySeats:new Set(), seatsMeta:{} };
+  online.channel = subscribeOnlineChannel(code);
+  document.getElementById("onlineSetup").style.display="none";
+  document.getElementById("onlineRoom").style.display="block";
+  document.getElementById("roomCodeDisplay").textContent = code;
+  document.getElementById("onlineStartBtn").style.display="none";
+  renderSeatClaims();
+});
+
+document.getElementById("leaveRoomBtn").addEventListener("click", ()=>{
+  if(online && online.channel) supabaseClient.removeChannel(online.channel);
+  online = null;
+  state = null;
+  document.getElementById("onlineSetup").style.display="block";
+  document.getElementById("onlineRoom").style.display="none";
+  document.getElementById("gamePanel").style.display="none";
+  document.getElementById("logPanel").style.display="none";
+});
+
+function renderSeatClaims(){
+  const box = document.getElementById("seatClaims");
+  box.innerHTML = "";
+  COLORS.forEach(c=>{
+    const meta = online.seatsMeta[c];
+    const row = document.createElement("div");
+    row.className = "seat";
+    const isMine = online.mySeats.has(c);
+    row.innerHTML = `<div class="dot" style="background:${COLOR_HEX[c]}"></div>
+      <span class="name">${COLOR_LABEL[c]}</span>
+      <span class="help-text" style="flex:1;">${meta ? meta.name + (isMine?" (vous)":"") : "Libre"}</span>`;
+    if(!meta){
+      const btn = document.createElement("button");
+      btn.className="ghost"; btn.textContent="Réserver";
+      btn.addEventListener("click", ()=>claimSeat(c));
+      row.appendChild(btn);
+    } else if(isMine){
+      const btn = document.createElement("button");
+      btn.className="ghost"; btn.textContent="Libérer";
+      btn.addEventListener("click", ()=>releaseSeat(c));
+      row.appendChild(btn);
+    } else if(online.isHost){
+      const btn = document.createElement("button");
+      btn.className="ghost"; btn.textContent="Bot";
+      btn.title="Assigner un joueur virtuel à cette couleur";
+      btn.addEventListener("click", ()=>{
+        online.seatsMeta[c] = {name:"Ordinateur", bot:true};
+        broadcastSeats();
+      });
+      row.appendChild(btn);
+    }
+    box.appendChild(row);
+  });
+}
+
+function claimSeat(color){
+  online.mySeats.add(color);
+  online.seatsMeta[color] = {name: myDisplayLabel()};
+  broadcastSeats();
+}
+function releaseSeat(color){
+  online.mySeats.delete(color);
+  delete online.seatsMeta[color];
+  broadcastSeats();
+}
+function broadcastSeats(){
+  renderSeatClaims();
+  online.channel.send({type:"broadcast", event:"seats", payload:{seatsMeta:online.seatsMeta}});
+}
+
+document.getElementById("onlineStartBtn").addEventListener("click", async ()=>{
+  const seats = {};
+  COLORS.forEach(c=>{
+    const meta = online.seatsMeta[c];
+    seats[c] = meta ? (meta.bot ? "bot" : "human") : "off";
+  });
+  const activeCount = Object.values(seats).filter(v=>v!=="off").length;
+  if(activeCount<2){ alert("Il faut au moins 2 couleurs réservées ou en bot."); return; }
+  const diceMode = parseInt(document.getElementById("onlineDiceMode").value,10);
+  state = newGame(seats, diceMode);
+  document.getElementById("gamePanel").style.display="block";
+  document.getElementById("logPanel").style.display="block";
+  hideSetupPanels();
+  renderAll();
+  await createGameRowInSupabase(seats, diceMode);
+  broadcastState();
+  maybeBotTurn();
+});
+
+function broadcastState(){
+  if(!online || !online.channel || !state) return;
+  online.channel.send({type:"broadcast", event:"state", payload: state});
+}
+function isMyTurnOnline(){
+  if(!online) return true; // mode local : toujours autorisé
+  return online.mySeats.has(currentColor());
+}
+
+/* =========================================================================
+   Supabase — backend réel : authentification (comptes joueurs), habillage
+   sponsor, journal des actions admin, et historique complet des parties.
+   Remplacez SUPABASE_URL / SUPABASE_ANON_KEY par les valeurs de votre projet
+   (Réglages > API dans le tableau de bord Supabase). Voir le script SQL
+   fourni séparément pour créer les tables et les politiques RLS.
+   ========================================================================= */
+const SUPABASE_URL = "https://fkclffjtkwkuvharihev.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrY2xmZmp0a3drdXZoYXJpaGV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTgwMTUsImV4cCI6MjEwMDkzNDAxNX0.qp0mamaOuXn97kjdwYbyhycSDuqH950RQ0LHMcva-kk";
+
+let supabaseClient = null;
+let supabaseReady = false;
+try{
+  if(window.supabase && SUPABASE_URL.indexOf("YOUR-PROJECT")===-1 && SUPABASE_ANON_KEY.indexOf("YOUR-ANON")===-1){
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseReady = true;
+  }
+}catch(e){ console.warn("Supabase non initialisé :", e); }
+
+let currentUser = null;    // { id, email }
+let currentProfile = null; // { role: 'player' | 'admin' }
+let isGuest = false;
+
+function setAuthStatus(msg){ const el=document.getElementById("authStatus"); if(el) el.textContent = msg||""; }
+
+function refreshUserBar(){
+  const bar = document.getElementById("userBar");
+  const logoutBtn = document.getElementById("logoutBtn");
+  if(currentUser){
+    bar.innerHTML = `${currentUser.email} ${currentProfile? `<span class="role-badge">${currentProfile.role}</span>`:""}`;
+    logoutBtn.style.display="inline-block";
+  } else if(isGuest){
+    bar.innerHTML = `Invité <span class="role-badge">sans historique</span>`;
+    logoutBtn.style.display="inline-block";
+  } else {
+    bar.innerHTML = "";
+    logoutBtn.style.display="none";
+  }
+}
+
+function showGameUi(){
+  document.getElementById("authPanel").style.display="none";
+  document.getElementById("modeSwitchPanel").style.display="block";
+  document.getElementById("setupPanel").style.display="block";
+  document.getElementById("onlinePanel").style.display="none";
+}
+function showAuthUi(){
+  document.getElementById("authPanel").style.display="block";
+  document.getElementById("modeSwitchPanel").style.display="none";
+  document.getElementById("setupPanel").style.display="none";
+  document.getElementById("onlinePanel").style.display="none";
+  document.getElementById("gamePanel").style.display="none";
+  document.getElementById("logPanel").style.display="none";
+}
+
+async function fetchOrCreateProfile(userId){
+  if(!supabaseReady) return {role:"player"};
+  try{
+    let { data, error } = await supabaseClient.from("profiles").select("role").eq("id", userId).single();
+    if(data) return data; // lecture réussie : on ne touche à rien, on renvoie le vrai rôle tel quel
+    if(error && error.code==="PGRST116"){
+      // "PGRST116" = aucune ligne trouvée : le profil n'existe vraiment pas encore, on le crée
+      const ins = await supabaseClient.from("profiles").upsert({id:userId, role:"player"}).select("role").single();
+      return ins.data || {role:"player"};
+    }
+    // toute AUTRE erreur (réseau, RLS, etc.) : ne jamais écrire en base, juste un repli local
+    console.warn("Lecture du profil impossible (repli local, rien n'est modifié en base) :", error);
+    return {role:"player"};
+  }catch(e){
+    console.warn("Lecture du profil impossible (repli local, rien n'est modifié en base) :", e);
+    return {role:"player"};
+  }
+}
+
+async function handleAuthedSession(user){
+  currentUser = { id:user.id, email:user.email };
+  isGuest = false;
+  currentProfile = await fetchOrCreateProfile(user.id);
+  refreshUserBar();
+  showGameUi();
+}
+
+document.getElementById("signUpBtn").addEventListener("click", async ()=>{
+  if(!supabaseReady){ setAuthStatus("Backend Supabase non configuré (voir SUPABASE_URL/KEY dans le code)."); return; }
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+  if(!email || password.length<6){ setAuthStatus("Email valide + mot de passe (6 caractères min.) requis."); return; }
+  setAuthStatus("Création du compte…");
+  const { data, error } = await supabaseClient.auth.signUp({ email, password });
+  if(error){ setAuthStatus("Erreur : "+error.message); return; }
+  if(data.user && !data.session){
+    setAuthStatus("Compte créé. Vérifiez votre email pour confirmer, puis connectez-vous.");
+  } else if(data.session){
+    await handleAuthedSession(data.user);
+  }
+});
+
+document.getElementById("signInBtn").addEventListener("click", async ()=>{
+  if(!supabaseReady){ setAuthStatus("Backend Supabase non configuré (voir SUPABASE_URL/KEY dans le code)."); return; }
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+  if(!email || !password){ setAuthStatus("Renseignez email et mot de passe."); return; }
+  setAuthStatus("Connexion…");
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if(error){ setAuthStatus("Erreur : "+error.message); return; }
+  await handleAuthedSession(data.user);
+});
+
+document.getElementById("guestBtn").addEventListener("click", ()=>{
+  isGuest = true; currentUser = null; currentProfile = null;
+  refreshUserBar();
+  showGameUi();
+  setAuthStatus("");
+});
+
+document.getElementById("logoutBtn").addEventListener("click", async ()=>{
+  if(supabaseReady && currentUser) await supabaseClient.auth.signOut();
+  currentUser=null; currentProfile=null; isGuest=false;
+  refreshUserBar();
+  showAuthUi();
+  state=null;
+});
+
+async function initAuthFromSession(){
+  if(!supabaseReady){ setAuthStatus("Backend Supabase non configuré — vous pouvez jouer en invité."); return; }
+  const { data } = await supabaseClient.auth.getSession();
+  if(data && data.session && data.session.user){
+    await handleAuthedSession(data.session.user);
+  }
+  supabaseClient.auth.onAuthStateChange((event, session)=>{
+    if(event==="SIGNED_OUT"){ currentUser=null; currentProfile=null; refreshUserBar(); }
+  });
+}
+
+/* ---- Sponsoring (table sponsor_config, id=1), lisible par tous, modifiable par les admins uniquement (RLS) ---- */
+async function loadSponsorConfig(){
+  const statusEl = document.getElementById("sponsorStatusText");
+  if(!supabaseReady){ if(statusEl) statusEl.textContent="Backend Supabase non configuré (aucun habillage appliqué)."; return; }
+  try{
+    const { data, error } = await supabaseClient.from("sponsor_config").select("cell_img,board_img,center_img,playlist,cell_images,yard_images").eq("id",1).single();
+    if(error || !data){ if(statusEl) statusEl.textContent="Aucune configuration sponsor définie pour l'instant."; return; }
+    sponsorCfg = { cellImg:data.cell_img||"", boardImg:data.board_img||"", centerImg:data.center_img||"", playlist:data.playlist||[], cellImages:data.cell_images||{}, yardImages:data.yard_images||{} };
+    if(statusEl) statusEl.textContent="Configuration sponsor chargée.";
+  }catch(e){ if(statusEl) statusEl.textContent="Aucune configuration sponsor définie pour l'instant."; }
+  renderBoard();
+  renderPlaylistUi();
+}
+
+async function saveSponsorConfig(cfg){
+  sponsorCfg = cfg;
+  const statusEl = document.getElementById("sponsorStatusText");
+  if(supabaseReady && currentUser){
+    try{
+      const { error } = await supabaseClient.from("sponsor_config").upsert({
+        id:1, cell_img:cfg.cellImg, board_img:cfg.boardImg, center_img:cfg.centerImg, playlist:cfg.playlist||[],
+        cell_images:cfg.cellImages||{}, yard_images:cfg.yardImages||{},
+        updated_by: currentUser.id, updated_at: new Date().toISOString()
+      });
+      if(error) throw error;
+      if(statusEl) statusEl.textContent="Configuration sponsor mise à jour (partagée).";
+      await logAdminAction("update_sponsor_config", cfg);
+    }catch(e){
+      if(statusEl) statusEl.textContent="Échec de l'enregistrement ; appliqué pour cette session seulement.";
+    }
+  } else {
+    if(statusEl) statusEl.textContent="Non connecté / backend indisponible ; appliqué pour cette session seulement.";
+  }
+  renderBoard();
+  renderPlaylistUi();
+}
+
+// Enregistre uniquement l'image d'UNE case (fusion, sans écraser les autres cases déjà configurées).
+async function saveCellImage(cellIndex, url){
+  const cellImages = Object.assign({}, sponsorCfg.cellImages||{});
+  if(url) cellImages[cellIndex] = url; else delete cellImages[cellIndex];
+  const cfg = Object.assign({}, sponsorCfg, {cellImages});
+  await saveSponsorConfig(cfg);
+}
+
+// Enregistre l'image d'UN bercail précis (fusion, sans écraser les autres).
+async function saveYardImage(color, url){
+  const yardImages = Object.assign({}, sponsorCfg.yardImages||{});
+  if(url) yardImages[color] = url; else delete yardImages[color];
+  const cfg = Object.assign({}, sponsorCfg, {yardImages});
+  await saveSponsorConfig(cfg);
+}
+
+// Upload d'un fichier image vers le bucket Supabase Storage "sponsor-images",
+// puis renvoie son URL publique (utilisable comme n'importe quelle URL d'image).
+async function uploadSponsorImage(file, pathHint){
+  if(!supabaseReady || !currentUser) throw new Error("Non connecté / backend indisponible.");
+  const ext = (file.name.split(".").pop()||"png").toLowerCase();
+  const path = `${pathHint}-${Date.now()}.${ext}`;
+  const { error } = await supabaseClient.storage.from("sponsor-images").upload(path, file, {upsert:true});
+  if(error) throw error;
+  const { data } = supabaseClient.storage.from("sponsor-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function logAdminAction(action, details){
+  if(!supabaseReady || !currentUser) return;
+  try{
+    await supabaseClient.from("admin_logs").insert({ user_id: currentUser.id, action, details });
+  }catch(e){ console.warn("admin_logs insert failed", e); }
+}
+
+document.getElementById("adminBtn").addEventListener("click", async ()=>{
+  if(!currentUser){
+    alert("Connectez-vous avec un compte administrateur pour accéder à cet espace.");
+    return;
+  }
+  // on revérifie toujours en direct (pas seulement le cache local) pour éviter
+  // qu'une promotion récente en base ne soit pas encore reflétée côté client
+  currentProfile = await fetchOrCreateProfile(currentUser.id);
+  refreshUserBar();
+  if(!currentProfile || currentProfile.role!=="admin"){
+    alert("Votre compte n'a pas le rôle administrateur. Demandez à ce que votre compte soit promu (voir table 'profiles').");
+    return;
+  }
+  openAdminForm();
+});
+
+function openAdminForm(){
+  const playlistText = (sponsorCfg.playlist||[]).map(t=>`${t.title}|${t.url}`).join("\n");
+  const fieldBlock = (labelText, inputId, fileId, value)=>`
+      <div style="border:1px solid rgba(217,164,65,0.25);border-radius:8px;padding:8px;margin-bottom:10px;">
+        <label class="help-text" style="display:block;margin-bottom:4px;">${labelText}</label>
+        <input type="text" id="${inputId}" value="${value||''}" placeholder="https://..." style="width:100%;margin-bottom:6px;">
+        <label class="help-text" style="display:block;margin-bottom:3px;opacity:0.75;">— ou uploader un fichier :</label>
+        <input type="file" id="${fileId}" accept="image/*" style="width:100%;font-size:0.75rem;">
+      </div>`;
+  showModal(`
+    <h3>Habillage sponsor</h3>
+    <div style="text-align:left;">
+      ${fieldBlock("Image générique des cases", "admCell", "admCellFile", sponsorCfg.cellImg)}
+      ${fieldBlock("Fond du plateau", "admBoard", "admBoardFile", sponsorCfg.boardImg)}
+      ${fieldBlock("Logo central", "admCenter", "admCenterFile", sponsorCfg.centerImg)}
+      <p class="help-text" id="admUploadStatus" style="margin-bottom:10px;"></p>
+      <label class="help-text" style="display:block;margin-bottom:4px;">Playlist musicale — une ligne par morceau : Titre|URL</label>
+      <textarea id="admPlaylist" rows="4" style="width:100%;margin:0 0 10px;background:#0e2a26;color:var(--sand);border:1px solid rgba(217,164,65,0.4);border-radius:8px;padding:6px;">${playlistText}</textarea>
+    </div>
+    <button class="primary" id="admSave" style="width:100%;">Enregistrer (partagé)</button>
+    <button class="ghost" id="admCellImageBtn" style="width:100%;margin-top:8px;">🖼️ Personnaliser une case précise</button>
+    <button class="ghost" id="admYardImageBtn" style="width:100%;margin-top:8px;">🏠 Personnaliser un bercail</button>
+    <button class="ghost" id="admTournamentBtn" style="width:100%;margin-top:8px;">🏆 Créer un tournoi du mois</button>
+    <button class="ghost" id="admClose" style="width:100%;margin-top:6px;">Fermer</button>
+  `);
+  wireImageUploader("admCellFile", "admCell", "admUploadStatus", "board-cellimg");
+  wireImageUploader("admBoardFile", "admBoard", "admUploadStatus", "board-bg");
+  wireImageUploader("admCenterFile", "admCenter", "admUploadStatus", "board-center");
+  document.getElementById("admSave").addEventListener("click", async ()=>{
+    const playlist = document.getElementById("admPlaylist").value.split("\n")
+      .map(l=>l.trim()).filter(Boolean)
+      .map(l=>{ const [title,url] = l.split("|"); return {title:(title||"").trim(), url:(url||title||"").trim()}; });
+    const cfg = Object.assign({}, sponsorCfg, {
+      cellImg: document.getElementById("admCell").value.trim(),
+      boardImg: document.getElementById("admBoard").value.trim(),
+      centerImg: document.getElementById("admCenter").value.trim(),
+      playlist
+    });
+    await saveSponsorConfig(cfg);
+    closeModal();
+  });
+  document.getElementById("admClose").addEventListener("click", closeModal);
+  document.getElementById("admTournamentBtn").addEventListener("click", openTournamentForm);
+  document.getElementById("admCellImageBtn").addEventListener("click", openCellImageForm);
+  document.getElementById("admYardImageBtn").addEventListener("click", openYardImageForm);
+}
+
+// Branche un input file : dès qu'un fichier est choisi, il est envoyé vers Supabase
+// Storage et l'URL publique obtenue remplit automatiquement le champ URL associé.
+function wireImageUploader(fileInputId, urlInputId, statusId, pathHint){
+  const fileInput = document.getElementById(fileInputId);
+  if(!fileInput) return;
+  fileInput.addEventListener("change", async ()=>{
+    const file = fileInput.files[0];
+    if(!file) return;
+    const statusEl = document.getElementById(statusId);
+    if(statusEl) statusEl.textContent = "Envoi du fichier en cours…";
+    try{
+      const url = await uploadSponsorImage(file, pathHint);
+      document.getElementById(urlInputId).value = url;
+      if(statusEl) statusEl.textContent = "Fichier envoyé — pensez à cliquer sur Enregistrer.";
+    }catch(e){
+      if(statusEl) statusEl.textContent = "Échec de l'upload : "+e.message;
+    }
+  });
+}
+
+function cellLabel(idx){
+  const starColor = Object.keys(START_INDEX).find(c=>START_INDEX[c]===idx);
+  return starColor ? `Case ${idx+1} — départ ${COLOR_LABEL[starColor]} ★` : `Case ${idx+1}`;
+}
+
+// Configuration de l'image d'UNE case précise du plateau (52 cases communes),
+// par URL ou par upload direct d'un fichier.
+function openCellImageForm(){
+  const options = PATH_COORDS.map((_,idx)=>`<option value="${idx}">${cellLabel(idx)}</option>`).join("");
+  showModal(`
+    <h3>🖼️ Image d'une case précise</h3>
+    <div style="text-align:left;">
+      <label class="help-text">Choisir la case</label>
+      <select id="cellPicker" style="width:100%;margin:4px 0 10px;background:#0e2a26;color:var(--sand);border:1px solid rgba(217,164,65,0.4);border-radius:8px;padding:6px;">${options}</select>
+      <label class="help-text">URL de l'image</label>
+      <input type="text" id="cellImgUrl" style="margin:4px 0 8px;">
+      <label class="help-text">Ou uploader un fichier</label>
+      <input type="file" id="cellImgFile" accept="image/*" style="width:100%;margin:4px 0 8px;font-size:0.8rem;">
+      <p class="help-text" id="cellImgStatus"></p>
+    </div>
+    <button class="primary" id="cellImgSave" style="width:100%;">Enregistrer cette case</button>
+    <button class="ghost" id="cellImgClear" style="width:100%;margin-top:8px;">Retirer l'image de cette case</button>
+    <button class="ghost" id="cellImgBack" style="width:100%;margin-top:6px;">Retour</button>
+  `);
+  const picker = document.getElementById("cellPicker");
+  const urlInput = document.getElementById("cellImgUrl");
+  const syncUrlField = ()=>{ urlInput.value = (sponsorCfg.cellImages||{})[picker.value] || ""; };
+  syncUrlField();
+  picker.addEventListener("change", syncUrlField);
+
+  document.getElementById("cellImgSave").addEventListener("click", async ()=>{
+    const idx = picker.value;
+    const statusEl = document.getElementById("cellImgStatus");
+    const file = document.getElementById("cellImgFile").files[0];
+    let url = urlInput.value.trim();
+    if(file){
+      statusEl.textContent = "Envoi du fichier en cours…";
+      try{ url = await uploadSponsorImage(file, "cell-"+idx); }
+      catch(e){ statusEl.textContent = "Échec de l'upload : "+e.message; return; }
+    }
+    await saveCellImage(idx, url);
+    statusEl.textContent = "Image enregistrée pour "+cellLabel(parseInt(idx,10))+".";
+    syncUrlField();
+  });
+  document.getElementById("cellImgClear").addEventListener("click", async ()=>{
+    await saveCellImage(picker.value, "");
+    syncUrlField();
+    document.getElementById("cellImgStatus").textContent = "Image retirée pour cette case.";
+  });
+  document.getElementById("cellImgBack").addEventListener("click", openAdminForm);
+}
+
+// Configuration de l'image d'UN bercail précis (une des 4 zones de départ à 6x6 cases),
+// par URL ou par upload direct d'un fichier.
+function openYardImageForm(){
+  const options = COLORS.map(c=>`<option value="${c}">${COLOR_LABEL[c]}</option>`).join("");
+  showModal(`
+    <h3>🏠 Image d'un bercail précis</h3>
+    <div style="text-align:left;">
+      <label class="help-text">Choisir le bercail</label>
+      <select id="yardPicker" style="width:100%;margin:4px 0 10px;background:#0e2a26;color:var(--sand);border:1px solid rgba(217,164,65,0.4);border-radius:8px;padding:6px;">${options}</select>
+      <label class="help-text">URL de l'image</label>
+      <input type="text" id="yardImgUrl" style="margin:4px 0 8px;">
+      <label class="help-text">Ou uploader un fichier</label>
+      <input type="file" id="yardImgFile" accept="image/*" style="width:100%;margin:4px 0 8px;font-size:0.8rem;">
+      <p class="help-text" id="yardImgStatus"></p>
+    </div>
+    <button class="primary" id="yardImgSave" style="width:100%;">Enregistrer ce bercail</button>
+    <button class="ghost" id="yardImgClear" style="width:100%;margin-top:8px;">Retirer l'image de ce bercail</button>
+    <button class="ghost" id="yardImgBack" style="width:100%;margin-top:6px;">Retour</button>
+  `);
+  const picker = document.getElementById("yardPicker");
+  const urlInput = document.getElementById("yardImgUrl");
+  const syncUrlField = ()=>{ urlInput.value = (sponsorCfg.yardImages||{})[picker.value] || ""; };
+  syncUrlField();
+  picker.addEventListener("change", syncUrlField);
+
+  document.getElementById("yardImgSave").addEventListener("click", async ()=>{
+    const color = picker.value;
+    const statusEl = document.getElementById("yardImgStatus");
+    const file = document.getElementById("yardImgFile").files[0];
+    let url = urlInput.value.trim();
+    if(file){
+      statusEl.textContent = "Envoi du fichier en cours…";
+      try{ url = await uploadSponsorImage(file, "yard-"+color); }
+      catch(e){ statusEl.textContent = "Échec de l'upload : "+e.message; return; }
+    }
+    await saveYardImage(color, url);
+    statusEl.textContent = "Image enregistrée pour le bercail "+COLOR_LABEL[color]+".";
+    syncUrlField();
+  });
+  document.getElementById("yardImgClear").addEventListener("click", async ()=>{
+    await saveYardImage(picker.value, "");
+    syncUrlField();
+    document.getElementById("yardImgStatus").textContent = "Image retirée pour ce bercail.";
+  });
+  document.getElementById("yardImgBack").addEventListener("click", openAdminForm);
+}
+
+function openTournamentForm(){
+  showModal(`
+    <h3>🏆 Nouveau tournoi sponsorisé</h3>
+    <div style="text-align:left;">
+      <label class="help-text">Nom du tournoi</label>
+      <input type="text" id="tName" placeholder="Tournoi RACE-SEN-LUDO — Août" style="margin:4px 0 10px;">
+      <label class="help-text">Sponsor</label>
+      <input type="text" id="tSponsor" placeholder="Nom du sponsor" style="margin:4px 0 10px;">
+      <label class="help-text">Logo sponsor (URL)</label>
+      <input type="text" id="tLogo" style="margin:4px 0 10px;">
+      <label class="help-text">Récompense</label>
+      <input type="text" id="tPrize" placeholder="Ex: 50 000 FCFA + lot sponsor" style="margin:4px 0 10px;">
+      <label class="help-text">Début</label>
+      <input type="date" id="tStart" style="margin:4px 0 10px;">
+      <label class="help-text">Fin</label>
+      <input type="date" id="tEnd" style="margin:4px 0 10px;">
+    </div>
+    <button class="primary" id="tSave" style="width:100%;">Créer le tournoi</button>
+    <button class="ghost" id="tClose" style="width:100%;margin-top:6px;">Retour</button>
+  `);
+  document.getElementById("tSave").addEventListener("click", async ()=>{
+    const name = document.getElementById("tName").value.trim();
+    const starts = document.getElementById("tStart").value;
+    const ends = document.getElementById("tEnd").value;
+    if(!name || !starts || !ends){ alert("Nom, début et fin sont requis."); return; }
+    try{
+      const { error } = await supabaseClient.from("tournaments").insert({
+        name, sponsor_name: document.getElementById("tSponsor").value.trim(),
+        sponsor_logo_url: document.getElementById("tLogo").value.trim(),
+        prize_description: document.getElementById("tPrize").value.trim(),
+        starts_at: new Date(starts).toISOString(),
+        ends_at: new Date(ends+"T23:59:59").toISOString(),
+        created_by: currentUser.id
+      });
+      if(error) throw error;
+      await logAdminAction("create_tournament", {name, starts, ends});
+      closeModal();
+      loadActiveTournament();
+    }catch(e){ alert("Échec de création du tournoi : "+e.message); }
+  });
+  document.getElementById("tClose").addEventListener("click", openAdminForm);
+}
+
+/* ---- Historique des parties (games / game_moves) ---- */
+async function createGameRowInSupabase(seats, diceMode){
+  if(!supabaseReady || !currentUser){ state.gameId=null; return; }
+  try{
+    const { data, error } = await supabaseClient.from("games").insert({
+      user_id: currentUser.id, dice_mode: diceMode, seats, started_at: new Date().toISOString(),
+      tournament_id: activeTournament ? activeTournament.id : null
+    }).select("id").single();
+    if(error) throw error;
+    state.gameId = data.id;
+  }catch(e){ console.warn("games insert failed", e); state.gameId=null; }
+}
+
+async function logMoveToSupabase(color, die, move, recentLogs){
+  if(!supabaseReady || !currentUser || !state || !state.gameId) return;
+  state.moveSeq++;
+  try{
+    await supabaseClient.from("game_moves").insert({
+      game_id: state.gameId, seq: state.moveSeq, color, die, move_type: move.type,
+      details: { move, description: recentLogs }
+    });
+  }catch(e){ console.warn("game_moves insert failed", e); }
+}
+
+async function updateGameResultInSupabase(winnerColor){
+  if(!supabaseReady || !currentUser || !state || !state.gameId) return;
+  try{
+    await supabaseClient.from("games").update({
+      winner: winnerColor, ended_at: new Date().toISOString()
+    }).eq("id", state.gameId);
+  }catch(e){ console.warn("games update failed", e); }
+}
+
+document.getElementById("helpBtn").addEventListener("click", ()=>{
+  showModal(`
+    <h3>Règles &amp; fonctionnement de RACE-SEN-LUDO</h3>
+
+    <div style="text-align:left;font-size:0.85rem;line-height:1.55;max-height:65vh;overflow-y:auto;">
+      <p style="color:var(--gold);font-weight:700;margin-bottom:2px;">🎲 Déplacements de base</p>
+      <p>4 couleurs : vert, jaune, bleu, rouge — c'est aussi l'ordre des tours. Chaque pion part de son bercail, parcourt 51 cases communes, puis 5 cases de son couloir final avant d'arriver à la maison (case centrale). Un <b>6</b> est nécessaire pour sortir un pion du bercail.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🎯 Un seul pion en jeu</p>
+      <p>Si un seul pion d'une couleur est déjà sorti du bercail et qu'aucun 6 n'est obtenu au lancer, ce pion avance automatiquement de la somme des dés — pas besoin de choisir manuellement. Si un choix ambigu se présente (ex : continuer ou envahir un couloir adverse) ou qu'un 6 sort, la main redevient manuelle. En mode 2 dés, si l'une des deux valeurs seule permet de capturer un pion adverse, cette capture est jouée en priorité avec ce seul dé plutôt que d'imposer la somme des deux — l'autre dé est alors sacrifié (non jouable pour ce pion).</p>
+      <p>En mode 1 dé (ou s'il ne reste qu'une seule valeur disponible en mode 2 dés), cliquez directement sur un pion éligible : pas besoin de sélectionner le dé au préalable.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🔀 Continuer ou rentrer dans son couloir</p>
+      <p>Arrivé au moment où il pourrait entrer dans son couloir final, un pion peut choisir de le faire pour finir sa course, <b>ou bien de poursuivre encore sur le chemin commun</b> pour un tour de plus, au lieu de rentrer. Les deux options sont proposées ensemble quand elles sont disponibles.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🧱 Barrage</p>
+      <p>Deux pions ou plus d'une même couleur peuvent se superposer sur une case (hors case de départ). Un pion adverse ne peut ni la traverser ni s'y arrêter, sauf si le joueur a accumulé, durant son tour (grâce aux relances offertes par les 6), un nombre de <b>6</b> au moins égal au nombre de pions superposés. Réussir la traversée "consomme" ce compteur. La même règle protège un barrage posé pile sur une case de départ : il faut alors autant de six que de pions empilés pour sortir du bercail et avancer.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🏠 Invasion de couloir final</p>
+      <p>La case juste avant l'entrée du couloir final d'une couleur est une case commune. Un pion adverse qui s'y arrête peut, à son prochain déplacement, choisir d'<b>envahir</b> ce couloir (si la valeur du dé est ≤5) pour y capturer des pions isolés. Il ne peut pas terminer sa course dans ce couloir : pour en ressortir, il doit reculer case par case, chaque recul nécessitant un <b>6</b>, jusqu'à revenir sur la piste commune, où il reprend son parcours normal. Un barrage à l'intérieur du couloir envahi reste protégé par la même règle du nombre de six. Si un barrage bloque le chemin normal et que l'invasion est la seule option restante pour un dé, le joueur n'est jamais forcé : une flèche 🚫 permet de refuser et de sacrifier ce dé plutôt que d'envahir.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🛡️ Capture &amp; cases de départ</p>
+      <p>Aucune case n'est totalement protégée — une capture est possible partout, tant qu'un seul pion adverse s'y trouve (pas de barrage). <b>Exception</b> : sur une case de départ, la capture n'est possible qu'en y arrivant avec un <b>six</b> (sortie de bercail, ou déplacement normal totalisant six) ; avec toute autre valeur, le pion adverse présent reste protégé sur cette case précise. <b>Autre exception</b> : une case personnalisée par le sponsor (image spécifique définie par l'admin) est une case protégée — aucune capture n'y est jamais possible, quel que soit le dé.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">⛓️ Pions capturés (rançon)</p>
+      <p>Un pion capturé n'est pas renvoyé directement dans son propre bercail — il est emmené <b>prisonnier dans le bercail du capteur</b> (affiché en pointillés avec 🔒, aux côtés des pions de la couleur qui l'a capturé). Son propriétaire doit payer un <b>six</b> pour le racheter et le voir revenir dans son propre bercail, d'où il devra ressortir normalement avec un autre six.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🎲 Dés &amp; relances</p>
+      <p>Vous pouvez jouer à 1 ou 2 dés. Avec 2 dés, chaque valeur peut être attribuée séparément à un pion de votre choix (pas de cumul automatique, sauf cas du pion unique ci-dessus). En mode 1 dé, un 6 offre un lancer bonus. En mode 2 dés, seul un <b>double-six</b> offre un lancer bonus — un 6 mélangé à une autre valeur ne donne pas de relance, la main passe au joueur suivant une fois les deux dés utilisés. Dans tous les cas, si un joueur cumule <b>6 six</b> au total sur son tour (relances comprises), la main passe immédiatement, même en pleine série de bonus.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🔊 Sons</p>
+      <p>Bruit de dés roulant sur une surface dure/verre généré en direct (aucun fichier audio externe). Un carillon "damal nélawi" retentit à chaque sortie réussie du bercail. Quand un pion termine sa course avec succès (arrivée à la maison), une exclamation dite à voix haute ("Youpi !", "Tarawliss !", "Tekkinaa !", "Reutj na !", "Waaw goor !" ou "Jaraama !", tirée au hasard) retentit, avec un texte flottant et un petit éclat façon pétard à l'écran. Le bouton 🔊/🔇 permet de couper le son ; "🔈 Tester" permet de vérifier que l'audio du navigateur est bien débloqué.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🎉 Victoire finale</p>
+      <p>Quand une couleur ramène ses 4 pions à la maison, un écran de fête s'affiche avec le classement complet (les couleurs restantes sont classées selon leur progression sur le plateau), accompagné de confettis, de ballons multicolores qui s'envolent et d'applaudissements.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🤖 Joueurs virtuels (ordinateur)</p>
+      <p>Chaque couleur peut être Humain, Ordinateur ou Inactive. Un ordinateur joue automatiquement, relance après un bonus, et enchaîne les tours sans intervention. S'il a le choix, il <b>ne rate jamais une capture possible</b> — il la joue toujours en priorité sur tout autre coup disponible.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🌐 Partie en ligne</p>
+      <p>Créez un salon (code à 6 caractères) ou rejoignez-en un existant. Chaque joueur réserve une couleur ; l'hôte peut assigner les couleurs restantes à des ordinateurs. L'état de la partie est synchronisé en temps réel entre tous les participants — sans validation serveur, c'est un canal de confiance entre les joueurs du salon.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🛠️ Administration (compte admin uniquement)</p>
+      <p>Habillage sponsor (image générique des cases, fond du plateau, logo central — par URL ou upload direct d'un fichier), <b>image personnalisée pour une case précise</b> parmi les 52 du plateau, <b>image personnalisée pour un bercail précis</b> (une des 4 zones de départ), playlist musicale (lue par tous les joueurs), et création de tournois sponsorisés mensuels avec classement des victoires. Tout l'historique (parties, coups joués, actions admin) est journalisé.</p>
+
+      <p style="opacity:0.7;margin-top:10px;"><i>Certains de ces points ne sont pas standardisés dans le Ludo classique : ce sont des interprétations raisonnables des règles demandées au fil de nos échanges — n'hésitez pas à demander d'autres ajustements.</i></p>
+    </div>
+    <button class="primary" onclick="closeModal()" style="margin-top:12px;">Fermer</button>
+  `);
+});
+
+function showModal(html){
+  document.getElementById("modalRoot").innerHTML = `<div class="choice-modal"><div class="choice-box">${html}</div></div>`;
+}
+function closeModal(){ document.getElementById("modalRoot").innerHTML=""; }
+
+/* =========================================================================
+   Turn / dice logic
+   ========================================================================= */
+document.getElementById("rollBtn").addEventListener("click", rollDice);
+document.getElementById("soundToggle").addEventListener("click", (e)=>{
+  soundEnabled = !soundEnabled;
+  e.target.textContent = soundEnabled ? "🔊" : "🔇";
+});
+document.getElementById("soundTestBtn").addEventListener("click", (e)=>{
+  const wasEnabled = soundEnabled;
+  soundEnabled = true; // forcer le son actif pour ce test, quel que soit l'état du bouton 🔊/🔇
+  try{
+    const ctx = getAudioCtx();
+    console.log("[Test son] AudioContext state avant resume :", ctx.state);
+    if(ctx.state==="suspended") ctx.resume();
+    playDiceRollSound(1);
+    e.target.textContent = "🔈 Son envoyé ! (état: " + ctx.state + ")";
+    setTimeout(()=>{ e.target.textContent="🔈 Tester"; }, 2500);
+  }catch(err){
+    console.error("[Test son] Erreur :", err);
+    e.target.textContent = "❌ Erreur (voir console)";
+    setTimeout(()=>{ e.target.textContent="🔈 Tester"; }, 3000);
+  }
+  soundEnabled = wasEnabled;
+});
+
+/* =========================================================================
+   Son des dés — bruit de dés lancés/roulés sur du verre, généré en direct
+   avec la Web Audio API (aucun fichier audio externe, donc rien à charger
+   ni de droits d'auteur en jeu). Un petit bouton permet de couper le son.
+   ========================================================================= */
+let audioCtx = null;
+let soundEnabled = true;
+function getAudioCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+// Un tour joué par un bot ne vient pas d'un vrai clic utilisateur : les navigateurs bloquent
+// alors silencieusement l'audio. On "déverrouille" donc l'AudioContext dès le tout premier
+// clic/touch humain sur la page, pour que le son fonctionne aussi ensuite pour les bots.
+function unlockAudioOnce(){
+  try{
+    const ctx = getAudioCtx();
+    if(ctx.state==="suspended") ctx.resume();
+  }catch(e){ /* ignore */ }
+  document.removeEventListener("click", unlockAudioOnce);
+  document.removeEventListener("touchstart", unlockAudioOnce);
+  document.removeEventListener("keydown", unlockAudioOnce);
+}
+document.addEventListener("click", unlockAudioOnce);
+document.addEventListener("touchstart", unlockAudioOnce);
+document.addEventListener("keydown", unlockAudioOnce);
+function playClack(time, intensity, freq){
+  const ctx = getAudioCtx();
+  const dur = 0.028 + Math.random()*0.012;
+  const bufferSize = Math.floor(ctx.sampleRate * dur);
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<bufferSize;i++){
+    data[i] = (Math.random()*2-1) * Math.pow(1 - i/bufferSize, 2.2);
+  }
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+  const bandpass = ctx.createBiquadFilter();
+  bandpass.type = "bandpass";
+  bandpass.frequency.value = freq;
+  bandpass.Q.value = 1.1 + Math.random()*0.6;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(intensity, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+  noise.connect(bandpass).connect(gain).connect(ctx.destination);
+  noise.start(time);
+  noise.stop(time + dur + 0.01);
+  // fin tintement résonant, façon verre, en plus du clac
+  const ring = ctx.createOscillator();
+  ring.type = "sine";
+  ring.frequency.setValueAtTime(freq*1.4, time);
+  const ringGain = ctx.createGain();
+  ringGain.gain.setValueAtTime(intensity*0.35, time);
+  ringGain.gain.exponentialRampToValueAtTime(0.0001, time + dur*1.8);
+  ring.connect(ringGain).connect(ctx.destination);
+  ring.start(time);
+  ring.stop(time + dur*1.8 + 0.01);
+}
+function playDiceRollSound(numDice){
+  if(!soundEnabled) return;
+  try{
+    const ctx = getAudioCtx();
+    if(ctx.state === "suspended") ctx.resume();
+    const now = ctx.currentTime;
+    const totalDuration = 0.5;
+    const clacksPerDie = 11;
+    for(let d=0; d<numDice; d++){
+      const dieOffset = d*0.03;
+      for(let i=0;i<clacksPerDie;i++){
+        const progress = i/clacksPerDie;
+        const t = now + dieOffset + progress*totalDuration + (Math.random()*0.012);
+        const intensity = 0.22 * (1-progress) * (0.55 + Math.random()*0.55);
+        const freq = 2200 + Math.random()*2600; // timbre verre/plastique dur
+        playClack(t, intensity, freq);
+      }
+      // petit "clic" final quand le dé se stabilise
+      playClack(now + dieOffset + totalDuration + 0.04, 0.3, 3200);
+    }
+  }catch(e){ console.warn("Audio non disponible :", e); }
+}
+
+// "Damal nélawi !" — petit carillon de réussite joué quand un pion sort avec succès du bercail.
+function playExitSuccessSound(){
+  if(!soundEnabled) return;
+  try{
+    const ctx = getAudioCtx();
+    if(ctx.state === "suspended") ctx.resume();
+    const now = ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // arpège ascendant (do-mi-sol-do)
+    notes.forEach((freq, i)=>{
+      const t = now + i*0.09;
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, t);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.22, t+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t+0.35);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t+0.4);
+    });
+  }catch(e){ console.warn("Audio non disponible :", e); }
+}
+
+// Exclamations de réussite ("Youpi !", "Tarawliss !", "Tekkinaa !", "Reutj na !",
+// "Waaw goor !", "Jaraama !"),
+// dites à voix haute via la synthèse vocale du navigateur (pas de fichier audio,
+// donc rien à charger ni de droits d'auteur en jeu) à chaque coup de pion réussi.
+const SUCCESS_PHRASES = ["Youpi !", "Tarawliss !", "Tekkinaa !", "Reutj na !", "Waaw goor !", "Jaraama !"];
+function speakPhrase(phrase){
+  if(!soundEnabled) return;
+  try{
+    if(!('speechSynthesis' in window)) return;
+    const utter = new SpeechSynthesisUtterance(phrase);
+    utter.lang = "fr-FR";
+    utter.rate = 1.05;
+    utter.pitch = 1.15;
+    utter.volume = 0.9;
+    window.speechSynthesis.speak(utter);
+  }catch(e){ console.warn("Synthèse vocale non disponible :", e); }
+}
+
+/* =========================================================================
+   Effets festifs — texte flottant + petits éclats façon pétards à chaque
+   coup réussi, et confettis/ballons/applaudissements à la victoire finale.
+   Tout est généré en CSS/JS (aucune image ni son externe).
+   ========================================================================= */
+const FX_COLORS = [COLOR_HEX.green, COLOR_HEX.yellow, COLOR_HEX.blue, COLOR_HEX.red, "#ffffff", "#d9a441"];
+
+function spawnFloatingText(text){
+  const layer = document.getElementById("fxLayer");
+  if(!layer) return;
+  const el = document.createElement("div");
+  el.className = "fx-text";
+  el.textContent = text;
+  el.style.animation = "fxFloatUpFade 1.1s ease-out forwards";
+  layer.appendChild(el);
+  setTimeout(()=>el.remove(), 1150);
+}
+
+function spawnFirecrackerBurst(){
+  const layer = document.getElementById("fxLayer");
+  if(!layer) return;
+  const cx = window.innerWidth/2, cy = window.innerHeight*0.32;
+  for(let i=0;i<16;i++){
+    const s = document.createElement("div");
+    s.className = "fx-spark";
+    const ang = Math.random()*Math.PI*2;
+    const dist = 55+Math.random()*95;
+    s.style.setProperty("--dx", Math.cos(ang)*dist+"px");
+    s.style.setProperty("--dy", Math.sin(ang)*dist+"px");
+    s.style.left = cx+"px"; s.style.top = cy+"px";
+    s.style.background = FX_COLORS[Math.floor(Math.random()*FX_COLORS.length)];
+    s.style.animation = "fxSparkFly .7s ease-out forwards";
+    layer.appendChild(s);
+    setTimeout(()=>s.remove(), 750);
+  }
+}
+
+// Célébration à chaque coup réussi : voix + texte flottant + petit pétard.
+function celebrateMoveSuccess(){
+  if(!soundEnabled) return;
+  const phrase = SUCCESS_PHRASES[Math.floor(Math.random()*SUCCESS_PHRASES.length)];
+  speakPhrase(phrase);
+  spawnFloatingText(phrase);
+  spawnFirecrackerBurst();
+}
+
+function spawnConfettiPiece(){
+  const layer = document.getElementById("fxLayer");
+  if(!layer) return;
+  const c = document.createElement("div");
+  c.className = "fx-confetti";
+  c.style.left = (Math.random()*100)+"vw";
+  c.style.background = FX_COLORS[Math.floor(Math.random()*FX_COLORS.length)];
+  c.style.setProperty("--rot", (Math.random()*720-360)+"deg");
+  const dur = 2.6+Math.random()*2.2;
+  c.style.animation = `fxConfettiFall ${dur}s linear forwards`;
+  layer.appendChild(c);
+  setTimeout(()=>c.remove(), dur*1000+100);
+}
+
+function spawnBalloon(){
+  const layer = document.getElementById("fxLayer");
+  if(!layer) return;
+  const b = document.createElement("div");
+  b.className = "fx-balloon";
+  b.style.left = (10+Math.random()*80)+"vw";
+  b.style.background = FX_COLORS[Math.floor(Math.random()*FX_COLORS.length)];
+  b.style.setProperty("--drift", (Math.random()*160-80)+"px");
+  const dur = 5+Math.random()*3;
+  b.style.animation = `fxBalloonRise ${dur}s ease-in forwards`;
+  layer.appendChild(b);
+  setTimeout(()=>b.remove(), dur*1000+100);
+}
+
+// Confettis + ballons en continu pendant quelques secondes, pour l'écran de victoire.
+function startVictoryCelebration(durationMs){
+  const confettiTimer = setInterval(spawnConfettiPiece, 90);
+  const balloonTimer = setInterval(spawnBalloon, 260);
+  setTimeout(()=>{ clearInterval(confettiTimer); clearInterval(balloonTimer); }, durationMs);
+}
+
+function playApplauseSound(){
+  if(!soundEnabled) return;
+  try{
+    const ctx = getAudioCtx();
+    if(ctx.state==="suspended") ctx.resume();
+    const now = ctx.currentTime;
+    const duration = 2.3;
+    const clapCount = 80;
+    for(let i=0;i<clapCount;i++){
+      const t = now + Math.random()*duration;
+      const dur = 0.02 + Math.random()*0.03;
+      const bufferSize = Math.floor(ctx.sampleRate*dur);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let j=0;j<bufferSize;j++){ data[j] = (Math.random()*2-1)*Math.pow(1-j/bufferSize, 1.5); }
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 1200 + Math.random()*3200;
+      bp.Q.value = 0.7;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.15+Math.random()*0.12, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t+dur);
+      src.connect(bp).connect(gain).connect(ctx.destination);
+      src.start(t); src.stop(t+dur+0.01);
+    }
+  }catch(e){ console.warn("Audio non disponible :", e); }
+}
+
+// Si un seul pion de la couleur est en jeu (hors bercail) et qu'aucun six n'est sorti,
+// on ne peut de toute façon rien faire d'autre : on avance directement ce pion de la
+// somme des dés, sans demander de choisir manuellement.
+function tryAutoPlaySinglePawn(values){
+  if(values.includes(6)) return false; // un six laisse la main au joueur (sortie possible, choix à faire)
+  const color = currentColor();
+  if(state.seats[color]==="bot") return false; // les bots gèrent déjà ça tout seuls
+  const activePawns = pawnsOf(color).filter(p=> p.state==="path" || p.state==="homecol" || p.state==="invading");
+  if(activePawns.length!==1) return false;
+  const pawn = activePawns[0];
+
+  // Priorité : si une des deux valeurs prise seule permet de capturer un pion adverse,
+  // il ne faut pas rater cette capture en imposant la somme des deux dés — on joue
+  // cette valeur seule, et l'autre dé est alors sacrifié (non jouable pour ce pion).
+  if(values.length===2){
+    const capturingOptions = [];
+    for(let i=0;i<values.length;i++){
+      const dv = values[i];
+      const otherVal = values[1-i];
+      const movesSingle = possibleMovesForPawn(pawn, dv);
+      if(movesSingle.length===1 && moveWouldCapture(pawn, movesSingle[0])){
+        capturingOptions.push({dv, otherVal, move: movesSingle[0]});
+      }
+    }
+    if(capturingOptions.length===1){
+      const opt = capturingOptions[0];
+      applyMove(pawn, opt.dv, opt.move);
+      state.dice = [];
+      logMsg(`${COLOR_LABEL[color]} n'a qu'un seul pion en jeu : capture avec le dé ${opt.dv} — le dé ${opt.otherVal} ne peut pas être joué et est sacrifié.`);
+      return true;
+    }
+    if(capturingOptions.length>1) return false; // plusieurs captures possibles : laisser le joueur choisir manuellement
+  }
+
+  const total = values.reduce((a,b)=>a+b,0);
+  const moves = possibleMovesForPawn(pawn, total);
+  if(moves.length!==1) return false; // coup ambigu ou invalide -> laisser la main manuelle habituelle
+  applyMove(pawn, total, moves[0]);
+  state.dice = [];
+  logMsg(`${COLOR_LABEL[color]} n'a qu'un seul pion en jeu : avance automatique de ${total} (${values.join("+")}).`);
+  return true;
+}
+
+function grantsBonus(values){
+  // 1 dé : un 6 donne un lancer bonus. 2 dés : seul un double-six donne un lancer bonus
+  // (un 6 mélangé à une autre valeur ne donne pas de relance, la main passe après usage des deux dés).
+  if(values.length===1) return values[0]===6;
+  return values.every(v=>v===6);
+}
+
+function rollDice(){
+  if(!state || state.winner) return;
+  if(online && !isMyTurnOnline()) return; // pas votre couleur ce tour-ci
+  if(state.phase==="rolling") return; // anti double-clic pendant l'animation
+  playDiceRollSound(state.diceMode);
+  const n = state.diceMode;
+  state.phase = "rolling";
+  document.getElementById("rollBtn").disabled = true;
+  animateDiceRoll(n, ()=>{
+    const values = [];
+    for(let i=0;i<n;i++) values.push(1+Math.floor(Math.random()*6));
+    finalizeRoll(values);
+  });
+}
+
+// Fait "rouler" des faces aléatoires sur le plateau pendant que le son joue, puis
+// appelle onSettled une fois l'animation terminée (les vraies valeurs sont tirées après).
+function animateDiceRoll(n, onSettled){
+  const zone = document.getElementById("diceZone");
+  let ticks = 0;
+  const totalTicks = 9;
+  const timer = setInterval(()=>{
+    zone.innerHTML = "";
+    for(let i=0;i<n;i++){
+      const d = buildPipDie(1+Math.floor(Math.random()*6));
+      d.classList.add("rolling");
+      zone.appendChild(d);
+    }
+    ticks++;
+    if(ticks>=totalTicks){
+      clearInterval(timer);
+      onSettled();
+    }
+  }, 70);
+}
+
+function finalizeRoll(values){
+  state.dice = values.slice();
+  state.diceHistory = values.slice();
+  const sixCount = values.filter(v=>v===6).length;
+  state.sixStreak += sixCount;
+  state.sixesRolledThisChain += sixCount;
+  state.phase="rolled";
+  logMsg(`${COLOR_LABEL[currentColor()]} lance : ${values.join(" , ")}`);
+  // on montre toujours la ou les valeurs obtenues sur le plateau, six ou pas,
+  // et on laisse un court instant avant d'enchaîner la suite du tour.
+  renderAll();
+  broadcastState();
+  setTimeout(()=>{
+    if(!state) return;
+    if(state.sixesRolledThisChain>=6){
+      logMsg(`${COLOR_LABEL[currentColor()]} obtient 6 six cumulés : la main passe immédiatement.`);
+      endTurn();
+      return;
+    }
+    if(tryAutoPlaySinglePawn(values)){
+      renderAll();
+      broadcastState();
+      postMoveFlow();
+      return;
+    }
+    if(!anyValidMove()){
+      logMsg(`Aucun mouvement possible pour ${COLOR_LABEL[currentColor()]}.`);
+      finishDiceUsage(grantsBonus(values));
+      return;
+    }
+    renderAll();
+    maybeBotTurnMidRoll();
+  }, 900);
+}
+
+function finishDiceUsage(gotBonus){
+  state.dice=[];
+  if(gotBonus){
+    state.bonusChainCount++;
+    state.phase="idle";
+    logMsg(`Relance bonus pour ${COLOR_LABEL[currentColor()]} (six obtenu) !`);
+    renderAll();
+    broadcastState();
+    maybeBotTurn(); // sinon un ordinateur qui obtient un bonus reste bloqué indéfiniment
+  } else {
+    endTurn();
+  }
+}
+
+function endTurn(){
+  state.sixStreak = 0;
+  state.bonusChainCount = 0;
+  state.sixesRolledThisChain = 0;
+  state.phase="idle";
+  state.dice=[];
+  state.turnIdx = (state.turnIdx+1) % state.turnOrder.length;
+  renderAll();
+  broadcastState();
+  maybeBotTurn();
+}
+
+function maybeBotTurn(){
+  if(!state || state.winner) return;
+  if(online && !online.isHost) return; // en ligne : seul l'hôte pilote les joueurs virtuels
+  if(state.seats[currentColor()]==="bot" && state.phase==="idle"){
+    setTimeout(()=>{ if(state && !state.winner) rollDice(); }, 700);
+  }
+}
+
+// After a roll, when dice remain, act on bot automatically or wait for human clicks
+// Est-ce que ce coup (déjà validé comme légal) capturerait un pion adverse ?
+// Utilisé pour empêcher l'ordinateur de rater une capture possible.
+function moveWouldCapture(p, move){
+  let key = null;
+  if(move.type==="enter") key = "path:"+globalIndex(p.color,1);
+  else if(move.type==="advance"){
+    key = move.newProgress<=51 ? "path:"+globalIndex(p.color, move.newProgress) : "homecol:"+p.color+":"+(move.newProgress-51);
+  } else if(move.type==="continueLoop"){
+    key = "path:"+globalIndex(p.color, move.newProgress);
+  } else if(move.type==="invadeEnter"){
+    key = "homecol:"+move.of+":"+move.depth;
+  } else if(move.type==="invadeAdvance"){
+    key = "homecol:"+p.invade.of+":"+move.newDepth;
+  } else return false;
+  const occ = state.pawns.filter(q=>q!==p && cellKey(q)===key && q.state!=="captured");
+  if(occ.length===0) return false;
+  return occ[0].color!==p.color;
+}
+
+function botAutoPlay(){
+  if(!state || state.winner) return;
+  if(online && !online.isHost) return; // en ligne : seul l'hôte pilote les joueurs virtuels
+  if(state.seats[currentColor()]!=="bot") return;
+  if(state.dice.length===0) return;
+  // rassembler tous les coups possibles, puis prioriser une capture s'il y en a une
+  const candidates = [];
+  for(const die of uniqueDice()){
+    for(const p of pawnsOf(currentColor())){
+      possibleMovesForPawn(p, die).forEach(move => candidates.push({die, p, move}));
+    }
+  }
+  if(candidates.length===0){
+    finishDiceUsage(grantsBonus(state.diceHistory));
+    return;
+  }
+  const capturing = candidates.filter(c => moveWouldCapture(c.p, c.move));
+  const chosen = capturing.length>0 ? capturing[0] : candidates[0];
+  removeOneDie(chosen.die);
+  applyMove(chosen.p, chosen.die, chosen.move);
+  renderAll();
+  broadcastState();
+  setTimeout(()=>{
+    if(state.dice.length>0 && !anyValidMove()){
+      finishDiceUsage(grantsBonus(state.diceHistory));
+    } else if(state.dice.length>0){
+      botAutoPlay();
+    } else {
+      finishDiceUsage(grantsBonus(state.diceHistory));
+    }
+  }, 500);
+}
+
+function removeOneDie(val){
+  const i = state.dice.indexOf(val);
+  if(i>=0) state.dice.splice(i,1);
+}
+
+/* =========================================================================
+   Rendering
+   ========================================================================= */
+function renderAll(){
+  renderTurnBanner();
+  renderDice();
+  renderBoard();
+  renderLog();
+  if(state.winner) showWinner();
+}
+
+function renderTurnBanner(){
+  const el = document.getElementById("turnBanner");
+  if(!state){ el.innerHTML=""; return; }
+  const c = currentColor();
+  const onlineWho = (online && online.seatsMeta[c]) ? ` — ${online.seatsMeta[c].name}` : "";
+  el.innerHTML = `<div class="swatch" style="background:${COLOR_HEX[c]}"></div>
+    <div>Tour de <b>${COLOR_LABEL[c]}</b> ${state.seats[c]==='bot'?'(Ordinateur)':''}${onlineWho} — dés: ${state.diceMode}</div>`;
+  document.getElementById("turnHint").textContent =
+    online && !isMyTurnOnline() ? "En attente du joueur qui contrôle cette couleur…" :
+    state.phase==="idle" ? "Cliquez sur « Lancer le(s) dé(s) »." :
+    state.phase==="rolling" ? "Les dés roulent…" :
+    "Choisissez une valeur de dé puis cliquez sur un pion éligible sur le plateau.";
+  document.getElementById("rollBtn").disabled = (state.phase!=="idle") || (state.seats[c]==="bot") || (online && !isMyTurnOnline());
+}
+
+let selectedDie = null;
+const PIP_LAYOUT = {
+  1: [4],
+  2: [0,8],
+  3: [0,4,8],
+  4: [0,2,6,8],
+  5: [0,2,4,6,8],
+  6: [0,2,3,5,6,8]
+};
+function buildPipDie(value){
+  const die = document.createElement("div");
+  die.className = "pip-die";
+  for(let i=0;i<9;i++){
+    const pip = document.createElement("div");
+    pip.className = "pip" + (PIP_LAYOUT[value].includes(i) ? " on" : "");
+    die.appendChild(pip);
+  }
+  return die;
+}
+function renderDice(){
+  const zone = document.getElementById("diceZone");
+  zone.innerHTML="";
+  if(!state || state.dice.length===0){
+    if(state && !state.winner && state.phase==="idle" && state.seats[currentColor()]!=="bot" && (!online || isMyTurnOnline())){
+      const hint = document.createElement("div");
+      hint.className = "help-text";
+      hint.style.cssText = "cursor:pointer;padding:6px 10px;opacity:0.85;";
+      hint.textContent = "🎲 Cliquez ici pour lancer le(s) dé(s)";
+      hint.addEventListener("click", rollDice);
+      zone.appendChild(hint);
+    }
+    return;
+  }
+  state.dice.forEach((v,i)=>{
+    const d = buildPipDie(v);
+    d.classList.add("pickable");
+    d.title = "Cliquez pour sélectionner ce dé";
+    if(effectiveSelectedDieIndex()===i) d.classList.add("used"), d.style.boxShadow="0 4px 0 rgba(0,0,0,0.35), 0 0 0 3px #fff, 0 0 0 6px var(--gold)";
+    d.addEventListener("click", ()=>{
+      if(state.seats[currentColor()]==="bot") return;
+      selectedDie = (selectedDie===i)?null:i;
+      renderDice();
+      renderBoard();
+    });
+    zone.appendChild(d);
+  });
+}
+
+function renderLog(){
+  const el = document.getElementById("log");
+  if(!state) return;
+  el.innerHTML = state.log.slice(0,40).map(m=>`<div>${m}</div>`).join("");
+}
+
+function showWinner(){
+  const ranking = computeFinalRanking();
+  const medals = ["🥇","🥈","🥉","🏅"];
+  const rankingHtml = ranking.map((c,i)=>
+    `<div style="display:flex;align-items:center;gap:8px;justify-content:center;margin:4px 0;">
+       <span>${medals[i]||"🏅"}</span>
+       <div class="swatch" style="background:${COLOR_HEX[c]};width:16px;height:16px;border-radius:5px;"></div>
+       <b>${COLOR_LABEL[c]}</b>${c===state.winner?" — Vainqueur !":""}
+     </div>`
+  ).join("");
+  document.getElementById("modalRoot").innerHTML = `
+    <div class="winner-banner"><div class="winner-box">
+      <h2>🏆 ${COLOR_LABEL[state.winner]} remporte la partie !</h2>
+      <div style="margin:10px 0 16px;">${rankingHtml}</div>
+      <button class="primary" onclick="location.reload()">Rejouer</button>
+    </div></div>`;
+  playApplauseSound();
+  startVictoryCelebration(6000);
+}
+
+/* ---- Board SVG ---- */
+const svgns = "http://www.w3.org/2000/svg";
+function el(tag, attrs){
+  const e = document.createElementNS(svgns, tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function rc(row,col){ return {x:col*CELL, y:row*CELL}; }
+
+function renderBoard(){
+  const svg = document.getElementById("board");
+  svg.innerHTML="";
+  pendingChoiceArrows = []; // le innerHTML="" ci-dessus les a déjà retirées du DOM
+
+  // sponsor board background
+  if(sponsorCfg.boardImg){
+    const defs = el("defs",{});
+    const pat = el("pattern",{id:"boardBg", patternUnits:"userSpaceOnUse", width:600, height:600});
+    pat.appendChild(el("image",{href:sponsorCfg.boardImg,"xlink:href":sponsorCfg.boardImg,x:0,y:0,width:600,height:600,preserveAspectRatio:"xMidYMid slice"}));
+    defs.appendChild(pat);
+    svg.appendChild(defs);
+    svg.appendChild(el("rect",{x:0,y:0,width:600,height:600,fill:"url(#boardBg)"}));
+  } else {
+    svg.appendChild(el("rect",{x:0,y:0,width:600,height:600,fill:"#f3e6c9"}));
+  }
+
+  // yards
+  const yardBox = YARD_BOX;
+  COLORS.forEach(c=>{
+    const [r0,c0] = yardBox[c];
+    const p = rc(r0,c0);
+    svg.appendChild(el("rect",{x:p.x,y:p.y,width:6*CELL,height:6*CELL,fill:COLOR_HEX[c],opacity:0.85,rx:14}));
+    svg.appendChild(el("rect",{x:p.x+18,y:p.y+18,width:6*CELL-36,height:6*CELL-36,fill:"#f3e6c9",rx:10}));
+    const yardImg = (sponsorCfg.yardImages||{})[c];
+    if(yardImg){
+      const clipId = "yardclip-"+c;
+      const defs = el("defs",{});
+      const clipPath = el("clipPath",{id:clipId});
+      clipPath.appendChild(el("rect",{x:p.x+18,y:p.y+18,width:6*CELL-36,height:6*CELL-36,rx:10}));
+      defs.appendChild(clipPath);
+      svg.appendChild(defs);
+      svg.appendChild(el("image",{href:yardImg,"xlink:href":yardImg,x:p.x+18,y:p.y+18,width:6*CELL-36,height:6*CELL-36,opacity:0.8,preserveAspectRatio:"xMidYMid slice","clip-path":`url(#${clipId})`}));
+    }
+  });
+
+  // path cells
+  PATH_COORDS.forEach((coord, idx)=>{
+    const p = rc(coord[0], coord[1]);
+    let fill = "#f3e6c9";
+    let starColor = null;
+    Object.keys(START_INDEX).forEach(c=>{ if(START_INDEX[c]===idx) starColor = c; });
+    if(starColor) fill = COLOR_HEX[starColor];
+    const rect = el("rect",{x:p.x,y:p.y,width:CELL,height:CELL,fill,stroke:"#8a5a2b","stroke-width":1});
+    svg.appendChild(rect);
+    const specificImg = (sponsorCfg.cellImages||{})[idx];
+    const imgToUse = specificImg || (!starColor ? sponsorCfg.cellImg : null);
+    if(imgToUse){
+      const img = el("image",{href:imgToUse,"xlink:href":imgToUse,x:p.x+6,y:p.y+6,width:CELL-12,height:CELL-12,opacity:specificImg?0.75:0.55,preserveAspectRatio:"xMidYMid slice"});
+      svg.appendChild(img);
+    }
+    if(specificImg){
+      // petit badge discret indiquant une case protégée (sponsorisée) : aucune capture n'y est possible
+      const shield = el("text",{x:p.x+CELL-3,y:p.y+11,"text-anchor":"end","font-size":10});
+      shield.textContent = "🛡️";
+      svg.appendChild(shield);
+    }
+    if(starColor){
+      const t = el("text",{x:p.x+CELL/2,y:p.y+CELL/2+5,"text-anchor":"middle","font-size":16,fill:"#fff"});
+      t.textContent="★";
+      svg.appendChild(t);
+    }
+  });
+
+  // home columns
+  COLORS.forEach(c=>{
+    HOME_COLUMN[c].forEach((coord)=>{
+      const p = rc(coord[0], coord[1]);
+      svg.appendChild(el("rect",{x:p.x,y:p.y,width:CELL,height:CELL,fill:COLOR_HEX[c],opacity:0.55,stroke:"#8a5a2b","stroke-width":1}));
+    });
+  });
+
+  // center home
+  const centerP = rc(6,6);
+  svg.appendChild(el("rect",{x:centerP.x,y:centerP.y,width:CELL*3,height:CELL*3,fill:"#fff",stroke:"#8a5a2b","stroke-width":2}));
+  const tri = [
+    {pts:`${centerP.x},${centerP.y} ${centerP.x+CELL*1.5},${centerP.y+CELL*1.5} ${centerP.x},${centerP.y+CELL*3}`, color:COLOR_HEX.red},
+    {pts:`${centerP.x},${centerP.y} ${centerP.x+CELL*3},${centerP.y} ${centerP.x+CELL*1.5},${centerP.y+CELL*1.5}`, color:COLOR_HEX.green},
+    {pts:`${centerP.x+CELL*3},${centerP.y} ${centerP.x+CELL*3},${centerP.y+CELL*3} ${centerP.x+CELL*1.5},${centerP.y+CELL*1.5}`, color:COLOR_HEX.yellow},
+    {pts:`${centerP.x},${centerP.y+CELL*3} ${centerP.x+CELL*3},${centerP.y+CELL*3} ${centerP.x+CELL*1.5},${centerP.y+CELL*1.5}`, color:COLOR_HEX.blue}
+  ];
+  tri.forEach(t=> svg.appendChild(el("polygon",{points:t.pts, fill:t.color})));
+  if(sponsorCfg.centerImg){
+    svg.appendChild(el("image",{href:sponsorCfg.centerImg,"xlink:href":sponsorCfg.centerImg,x:centerP.x+CELL*0.6,y:centerP.y+CELL*0.6,width:CELL*1.8,height:CELL*1.8,preserveAspectRatio:"xMidYMid slice"}));
+  }
+
+  // pawns
+  if(state){
+    drawPawns(svg);
+  }
+}
+
+function posFromKey(key){
+  if(!key) return {x:0,y:0};
+  const parts = key.split(":");
+  if(parts[0]==="path"){
+    const idx = parseInt(parts[1],10);
+    return rc(PATH_COORDS[idx][0], PATH_COORDS[idx][1]);
+  }
+  if(parts[0]==="homecol"){
+    const coord = HOME_COLUMN[parts[1]][parseInt(parts[2],10)-1];
+    return rc(coord[0], coord[1]);
+  }
+  return {x:0,y:0};
+}
+function pawnScreenPos(p, slotIdx){
+  if(p.state==="yard"){
+    const coord = YARD_SLOTS[p.color][p.id];
+    return rc(coord[0], coord[1]);
+  }
+  if(p.state==="finished"){
+    const base = rc(6,6);
+    const offsets = {red:[0.6,0.6], green:[1.8,0.6], yellow:[1.8,1.8], blue:[0.6,1.8]};
+    const off = offsets[p.color];
+    return {x:base.x+off[0]*CELL, y:base.y+off[1]*CELL};
+  }
+  if(p.state==="path"){
+    const idx = globalIndex(p.color, p.progress);
+    return rc(PATH_COORDS[idx][0], PATH_COORDS[idx][1]);
+  }
+  if(p.state==="homecol"){
+    const coord = HOME_COLUMN[p.color][p.progress-1];
+    return rc(coord[0], coord[1]);
+  }
+  if(p.state==="invading"){
+    const coord = HOME_COLUMN[p.invade.of][p.invade.depth-1];
+    return rc(coord[0], coord[1]);
+  }
+  if(p.state==="captured"){
+    return prisonYardPos(p.capturedBy, slotIdx||0);
+  }
+  return {x:0,y:0};
+}
+
+// Position d'un pion prisonnier : aligné sur la bande basse du bercail du capteur,
+// à côté de ses propres pions plutôt que sur une case du chemin.
+function prisonYardPos(captorColor, idx){
+  const [r0,c0] = YARD_BOX[captorColor];
+  const base = rc(r0,c0);
+  const cx = base.x + 26 + (idx%4)*26;
+  const cy = base.y + 6*CELL - 16;
+  return { x:cx-CELL/2, y:cy-CELL/2 };
+}
+
+function buildPawnShape(cx, cy, color, radius, eligible, isCaptured){
+  const g = el("g",{});
+  if(eligible) g.classList.add("pawn-choice-cell");
+  const bodyCy = cy + radius*0.15;
+  // ombre portée
+  g.appendChild(el("ellipse",{cx, cy:bodyCy+radius*0.9, rx:radius*0.95, ry:radius*0.3, fill:"rgba(0,0,0,0.28)"}));
+  // corps (base élargie, façon pion de jeu)
+  const body = el("ellipse",{
+    cx, cy:bodyCy+radius*0.22, rx:radius*0.92, ry:radius*0.66, fill:COLOR_HEX[color],
+    stroke: eligible?"#fff":"#231705", "stroke-width": eligible?3:1.4,
+    "stroke-dasharray": isCaptured? "3,2.5" : "none"
+  });
+  g.appendChild(body);
+  // tête (sphère supérieure)
+  const head = el("circle",{
+    cx, cy:bodyCy-radius*0.5, r:radius*0.56, fill:COLOR_HEX[color],
+    stroke: eligible?"#fff":"#231705", "stroke-width": eligible?2.2:1.1,
+    "stroke-dasharray": isCaptured? "2,2" : "none"
+  });
+  g.appendChild(head);
+  if(isCaptured){
+    g.setAttribute("opacity","0.85");
+    const lock = el("text",{x:cx, y:bodyCy-radius*0.25, "text-anchor":"middle","font-size":Math.max(9,radius*0.85)});
+    lock.textContent="🔒";
+    g.appendChild(lock);
+  }
+  return g;
+}
+
+function drawPawns(svg){
+  // group pawns by cellKey to offset stacked ones
+  const groups = {};
+  state.pawns.forEach(p=>{
+    const key = cellKey(p);
+    groups[key] = groups[key] || [];
+    groups[key].push(p);
+  });
+  Object.values(groups).forEach(group=>{
+    const isPrisonGroup = group[0] && group[0].state==="captured";
+    group.forEach((p, i)=>{
+      const base = pawnScreenPos(p, i);
+      const jitter = (!isPrisonGroup && group.length>1) ? [[-7,-7],[7,-7],[-7,7],[7,7]][i%4] : [0,0];
+      const cx = base.x + CELL/2 + jitter[0];
+      const cy = base.y + CELL/2 + jitter[1];
+      const eligible = isEligiblePawn(p);
+      const isCaptured = p.state==="captured";
+      const radius = isCaptured ? 10 : (group.length>1 ? 12 : 16);
+      const g = buildPawnShape(cx, cy, p.color, radius, eligible, isCaptured);
+      svg.appendChild(g);
+      if(eligible){
+        g.addEventListener("click", ()=> onPawnClicked(p));
+      }
+    });
+    // badge "xN" (barrage) — compte uniquement les pions actifs (non prisonniers) de même couleur
+    const activeCounts = {};
+    const capturedCount = group.filter(p=>p.state==="captured").length;
+    group.forEach(p=>{ if(p.state!=="captured"){ activeCounts[p.color]=(activeCounts[p.color]||0)+1; } });
+    const barrageColor = Object.keys(activeCounts).find(c=>activeCounts[c]>=2);
+    if(barrageColor && group[0].state!=="yard" && group[0].state!=="finished"){
+      const base = pawnScreenPos(group.find(p=>p.color===barrageColor));
+      const badge = el("text",{x:base.x+CELL-4,y:base.y+12,"text-anchor":"end","font-size":11,"font-weight":"bold",fill:"#231705"});
+      badge.textContent = "x"+activeCounts[barrageColor];
+      svg.appendChild(badge);
+    }
+    if(capturedCount>0 && group[0].state!=="yard" && group[0].state!=="finished"){
+      const base = pawnScreenPos(group.find(p=>p.state==="captured") || group[0]);
+      const badge = el("text",{x:base.x+CELL-4,y:base.y+CELL-6,"text-anchor":"end","font-size":10,"font-weight":"bold",fill:"#231705"});
+      badge.textContent = "🔒x"+capturedCount;
+      svg.appendChild(badge);
+    }
+  });
+}
+
+function effectiveSelectedDieIndex(){
+  // en mode 1 dé (ou s'il ne reste qu'une seule valeur), pas besoin de cliquer le dé d'abord
+  if(selectedDie!==null) return selectedDie;
+  if(state && state.dice.length===1) return 0;
+  return null;
+}
+
+function isEligiblePawn(p){
+  if(!state || state.phase!=="rolled" || state.winner) return false;
+  if(p.color!==currentColor()) return false;
+  if(state.seats[currentColor()]==="bot") return false;
+  if(online && !isMyTurnOnline()) return false;
+  const dieIdx = effectiveSelectedDieIndex();
+  if(dieIdx===null) return false;
+  const die = state.dice[dieIdx];
+  if(die===undefined) return false;
+  return possibleMovesForPawn(p, die).length>0;
+}
+
+let pendingChoiceArrows = [];
+function clearChoiceArrows(){
+  pendingChoiceArrows.forEach(node=>{ try{ node.remove(); }catch(e){} });
+  pendingChoiceArrows = [];
+}
+
+// Position (coin haut-gauche façon cellule) de la case ciblée par un coup donné.
+function moveTargetPos(p, move){
+  if(move.type==="declineInvade"){
+    const idx = globalIndex(p.color, p.progress); // reste sur sa case actuelle
+    return rc(PATH_COORDS[idx][0], PATH_COORDS[idx][1]);
+  }
+  if(move.type==="invadeEnter"){
+    const coord = HOME_COLUMN[move.of][move.depth-1];
+    return rc(coord[0], coord[1]);
+  }
+  if(move.type==="continueLoop"){
+    const idx = globalIndex(p.color, move.newProgress);
+    return rc(PATH_COORDS[idx][0], PATH_COORDS[idx][1]);
+  }
+  if(move.type==="advance"){
+    if(move.newProgress<=51){
+      const idx = globalIndex(p.color, move.newProgress);
+      return rc(PATH_COORDS[idx][0], PATH_COORDS[idx][1]);
+    } else {
+      const coord = HOME_COLUMN[p.color][move.newProgress-51-1];
+      return rc(coord[0], coord[1]);
+    }
+  }
+  if(move.type==="finish"){
+    return rc(7,7);
+  }
+  return {x:0,y:0};
+}
+
+// Position de la case immédiatement suivante dans la direction de ce coup (et non
+// la destination finale, potentiellement lointaine) — sert à orienter la flèche.
+function nextStepPos(p, move){
+  if(move.type==="invadeEnter"){
+    const coord = HOME_COLUMN[move.of][0];
+    return rc(coord[0], coord[1]);
+  }
+  if(move.type==="continueLoop"){
+    const idx = globalIndex(p.color, p.progress+1);
+    return rc(PATH_COORDS[idx][0], PATH_COORDS[idx][1]);
+  }
+  if(move.type==="advance"){
+    if(move.newProgress<=51){
+      const idx = globalIndex(p.color, p.progress+1);
+      return rc(PATH_COORDS[idx][0], PATH_COORDS[idx][1]);
+    } else {
+      const coord = HOME_COLUMN[p.color][0];
+      return rc(coord[0], coord[1]);
+    }
+  }
+  return null; // finish / declineInvade : pas de direction (symboles non orientés)
+}
+
+// Affiche, directement sur le plateau, une flèche cliquable pour chaque option possible
+// (au lieu d'une fenêtre de choix textuelle) — natif au plateau et interactif. Les
+// options directionnelles pivotent pour pointer vraiment vers leur direction réelle ;
+// les options sans direction (refuser, arriver à la maison) gardent un symbole fixe.
+function showMoveChoiceArrows(p, moves, proceed){
+  clearChoiceArrows();
+  const svg = document.getElementById("board");
+  const fromPos = pawnScreenPos(p);
+  const fromCx = fromPos.x + CELL/2, fromCy = fromPos.y + CELL/2;
+
+  moves.forEach(m=>{
+    const nsp = nextStepPos(p, m);
+    const g = el("g",{style:"cursor:pointer;"});
+
+    if(nsp){
+      const ncx = nsp.x + CELL/2, ncy = nsp.y + CELL/2;
+      const dx = ncx - fromCx, dy = ncy - fromCy;
+      const angleDeg = Math.atan2(dy, dx) * 180/Math.PI;
+      const dist = 30;
+      const px = fromCx + Math.cos(angleDeg*Math.PI/180)*dist;
+      const py = fromCy + Math.sin(angleDeg*Math.PI/180)*dist;
+      const halo = el("circle",{cx:px,cy:py,r:15,fill:"var(--gold)",stroke:"#fff","stroke-width":2.2,class:"choice-arrow-halo"});
+      // triangle pointant par défaut vers +X, puis tourné vers la vraie direction
+      const arrow = el("polygon",{
+        points:"8,0 -6,-6.5 -6,6.5",
+        fill:"#231705",
+        transform:`translate(${px},${py}) rotate(${angleDeg})`
+      });
+      g.appendChild(halo);
+      g.appendChild(arrow);
+    } else {
+      const pos = moveTargetPos(p, m);
+      const cx = pos.x + CELL/2, cy = pos.y + CELL/2;
+      const halo = el("circle",{cx,cy,r:17,fill:"var(--gold)",stroke:"#fff","stroke-width":2.5,class:"choice-arrow-halo"});
+      const label = el("text",{x:cx,y:cy+6,"text-anchor":"middle","font-size":18,"font-weight":"bold",fill:"#231705"});
+      label.textContent = m.type==="declineInvade" ? "🚫" : "🏁";
+      g.appendChild(halo);
+      g.appendChild(label);
+    }
+
+    g.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      clearChoiceArrows();
+      proceed(m);
+    });
+    svg.appendChild(g);
+    pendingChoiceArrows.push(g);
+  });
+}
+
+function onPawnClicked(p){
+  const dieIdx = effectiveSelectedDieIndex();
+  if(dieIdx===null) return;
+  const die = state.dice[dieIdx];
+  const moves = possibleMovesForPawn(p, die);
+  if(moves.length===0) return;
+  const proceed = (move)=>{
+    state.dice.splice(dieIdx,1);
+    selectedDie=null;
+    applyMove(p, die, move);
+    renderAll();
+    broadcastState();
+    postMoveFlow();
+  };
+  if(moves.length===1){
+    proceed(moves[0]);
+  } else {
+    showMoveChoiceArrows(p, moves, proceed);
+  }
+}
+
+function postMoveFlow(){
+  if(state.winner) return;
+  if(state.dice.length===0){
+    finishDiceUsage(grantsBonus(state.diceHistory));
+  } else if(!anyValidMove()){
+    finishDiceUsage(grantsBonus(state.diceHistory));
+  } else {
+    maybeBotTurnMidRoll();
+  }
+}
+function maybeBotTurnMidRoll(){
+  if(state.seats[currentColor()]==="bot"){
+    setTimeout(botAutoPlay, 500);
+  }
+}
+
+/* =========================================================================
+   Playlist musicale (gérée par l'admin, lue par tous les joueurs)
+   ========================================================================= */
+let playlistIdx = 0;
+let playlistPlaying = false;
+
+function renderPlaylistUi(){
+  const ui = document.getElementById("playlistUi");
+  const list = sponsorCfg.playlist || [];
+  if(!list.length){ ui.style.display="none"; return; }
+  ui.style.display="block";
+  if(playlistIdx>=list.length) playlistIdx=0;
+  document.getElementById("playlistTrackName").textContent = list[playlistIdx].title || "Piste "+(playlistIdx+1);
+}
+
+document.getElementById("playlistToggle").addEventListener("click", ()=>{
+  const list = sponsorCfg.playlist || [];
+  if(!list.length) return;
+  const audio = document.getElementById("playlistAudio");
+  if(!playlistPlaying){
+    audio.src = list[playlistIdx].url;
+    audio.play().catch(()=>{ setPlaylistStatus("Lecture impossible (format/URL du morceau)."); });
+    playlistPlaying = true;
+    document.getElementById("playlistToggle").textContent = "⏸";
+  } else {
+    audio.pause();
+    playlistPlaying = false;
+    document.getElementById("playlistToggle").textContent = "▶";
+  }
+});
+document.getElementById("playlistNext").addEventListener("click", ()=>{
+  const list = sponsorCfg.playlist || [];
+  if(!list.length) return;
+  playlistIdx = (playlistIdx+1) % list.length;
+  renderPlaylistUi();
+  const audio = document.getElementById("playlistAudio");
+  if(playlistPlaying){ audio.src = list[playlistIdx].url; audio.play().catch(()=>{}); }
+});
+document.getElementById("playlistAudio").addEventListener("ended", ()=>{
+  document.getElementById("playlistNext").click();
+});
+function setPlaylistStatus(msg){
+  const el2 = document.getElementById("playlistTrackName");
+  if(el2) el2.textContent = msg;
+}
+
+/* =========================================================================
+   Tournois sponsorisés mensuels
+   ========================================================================= */
+let activeTournament = null;
+
+async function loadActiveTournament(){
+  const panel = document.getElementById("tournamentPanel");
+  if(!supabaseReady){ panel.style.display="none"; return; }
+  try{
+    const nowIso = new Date().toISOString();
+    const { data, error } = await supabaseClient.from("tournaments")
+      .select("*").lte("starts_at", nowIso).gte("ends_at", nowIso)
+      .order("starts_at", {ascending:false}).limit(1);
+    if(error || !data || !data.length){ panel.style.display="none"; activeTournament=null; return; }
+    activeTournament = data[0];
+    panel.style.display="block";
+    const endsDate = new Date(activeTournament.ends_at);
+    document.getElementById("tournamentInfo").innerHTML =
+      `<b>${activeTournament.name}</b>${activeTournament.sponsor_name? " — sponsorisé par "+activeTournament.sponsor_name:""}<br>` +
+      (activeTournament.prize_description? `Récompense : ${activeTournament.prize_description}<br>`:"") +
+      `Se termine le ${endsDate.toLocaleDateString('fr-FR')}`;
+    await loadTournamentLeaderboard(activeTournament.id);
+  }catch(e){ panel.style.display="none"; }
+}
+
+async function loadTournamentLeaderboard(tournamentId){
+  const el2 = document.getElementById("tournamentLeaderboard");
+  try{
+    const { data, error } = await supabaseClient.from("games")
+      .select("user_id, winner").eq("tournament_id", tournamentId).not("winner","is",null);
+    if(error || !data){ el2.innerHTML=""; return; }
+    const counts = {};
+    data.forEach(g=>{ counts[g.user_id] = (counts[g.user_id]||0)+1; });
+    const userIds = Object.keys(counts);
+    if(!userIds.length){ el2.innerHTML = `<p class="help-text">Aucune victoire enregistrée pour l'instant.</p>`; return; }
+    const { data: profiles } = await supabaseClient.from("profiles").select("id,display_name").in("id", userIds);
+    const nameOf = {}; (profiles||[]).forEach(p=> nameOf[p.id]=p.display_name || "Joueur");
+    const ranking = userIds.map(id=>({id, name:nameOf[id]||"Joueur", wins:counts[id]}))
+      .sort((a,b)=>b.wins-a.wins).slice(0,10);
+    el2.innerHTML = "<table style='width:100%;font-size:0.8rem;'>" +
+      ranking.map((r,i)=>`<tr><td>${i+1}.</td><td>${r.name}</td><td style="text-align:right;">${r.wins} 🏆</td></tr>`).join("") +
+      "</table>";
+  }catch(e){ el2.innerHTML=""; }
+}
+
+// kick off bot play right after a human-triggered roll if current is bot (edge safety)
+const origRoll = rollDice;
+window.addEventListener("DOMContentLoaded", ()=>{
+  renderBoard();
+  refreshUserBar();
+  loadSponsorConfig();
+  initAuthFromSession();
+  loadActiveTournament();
+});
+</script>
+</body>
+</html>
