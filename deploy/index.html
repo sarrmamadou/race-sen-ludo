@@ -231,7 +231,7 @@
           <button class="primary" id="signInBtn" style="flex:1;">Connexion</button>
           <button class="ghost" id="signUpBtn" style="flex:1;">Créer un compte</button>
         </div>
-        <button class="ghost" id="guestBtn" style="width:100%;">Continuer en invité (partie locale uniquement, sans historique)</button>
+        <p class="help-text" style="text-align:center;margin-top:6px;">Un compte et un abonnement actif sont requis pour jouer.</p>
         <p class="help-text" id="authStatus"></p>
       </div>
 
@@ -795,7 +795,7 @@ document.getElementById("modeLocalBtn").addEventListener("click", ()=>{
 document.getElementById("modeOnlineBtn").addEventListener("click", ()=>{
   if(!supabaseReady){ alert("Le mode en ligne nécessite le backend Supabase (voir SUPABASE_URL/KEY)."); return; }
   if(isGuest || !currentUser){
-    alert("Le mode en ligne est réservé aux comptes abonnés. Créez un compte et abonnez-vous pour jouer en ligne — le mode invité ne permet que la partie locale.");
+    alert("Le mode en ligne est réservé aux comptes abonnés.");
     return;
   }
   document.getElementById("setupPanel").style.display="none";
@@ -1123,12 +1123,8 @@ document.getElementById("signInBtn").addEventListener("click", async ()=>{
   await handleAuthedSession(data.user);
 });
 
-document.getElementById("guestBtn").addEventListener("click", ()=>{
-  isGuest = true; currentUser = null; currentProfile = null;
-  refreshUserBar();
-  showGameUi();
-  setAuthStatus("");
-});
+// Le mode invité a été retiré : un compte + abonnement actif sont
+// désormais obligatoires pour jouer, en local comme en ligne.
 
 document.getElementById("logoutBtn").addEventListener("click", async ()=>{
   if(supabaseReady && currentUser) await supabaseClient.auth.signOut();
@@ -1139,7 +1135,7 @@ document.getElementById("logoutBtn").addEventListener("click", async ()=>{
 });
 
 async function initAuthFromSession(){
-  if(!supabaseReady){ setAuthStatus("Backend Supabase non configuré — vous pouvez jouer en invité."); return; }
+  if(!supabaseReady){ setAuthStatus("Backend Supabase non configuré — la connexion est indisponible."); return; }
   const { data } = await supabaseClient.auth.getSession();
   if(data && data.session && data.session.user){
     await handleAuthedSession(data.session.user);
@@ -1576,7 +1572,7 @@ document.getElementById("helpBtn").addEventListener("click", ()=>{
       <p>Chaque couleur peut être Humain, Ordinateur ou Inactive. Un ordinateur joue automatiquement, relance après un bonus, et enchaîne les tours sans intervention. S'il a le choix, il <b>ne rate jamais une capture possible</b> — il la joue toujours en priorité sur tout autre coup disponible.</p>
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🌐 Partie en ligne</p>
-      <p><b>Réservé aux comptes abonnés</b> (le mode invité ne permet que la partie locale). Créez un salon (code à 6 caractères) ou rejoignez-en un existant. Chaque joueur réserve une couleur ; l'hôte peut assigner les couleurs restantes à des ordinateurs. L'état de la partie est synchronisé en temps réel entre tous les participants — sans validation serveur, c'est un canal de confiance entre les joueurs du salon.</p>
+      <p><b>Réservé aux comptes abonnés</b>. Créez un salon (code à 6 caractères) ou rejoignez-en un existant. Chaque joueur réserve une couleur ; l'hôte peut assigner les couleurs restantes à des ordinateurs. L'état de la partie est synchronisé en temps réel entre tous les participants — sans validation serveur, c'est un canal de confiance entre les joueurs du salon.</p>
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">💳 Abonnement</p>
       <p>L'accès complet coûte <b>1000 FCFA par an au Sénégal</b> (paiement via QR code Wave Business, activation manuelle par l'admin), ou via un abonnement intégré à <b>2,99 $ par an au Sénégal</b> / <b>4,99 $ par an ailleurs dans le monde</b> sur l'App Store ou Google Play. Après connexion, un compte non abonné voit un écran de paiement adapté ; les admins ne sont jamais soumis à cette limite.</p>
