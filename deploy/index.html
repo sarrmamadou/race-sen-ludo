@@ -87,8 +87,9 @@
   body.fs-mode .layout{ grid-template-columns:1fr; gap:0; }
   body.fs-mode .board-wrap{
     min-height:calc(100vh - 70px); display:flex; flex-direction:column;
-    align-items:center; justify-content:center;
+    align-items:center; justify-content:flex-start;
   }
+  body.fs-mode .dice-tray{ min-height:78px; }
   .fs-header-row{
     display:none; align-items:center; justify-content:space-between; gap:10px;
     flex-wrap:wrap; padding:calc(env(safe-area-inset-top) + 6px) 4px 10px;
