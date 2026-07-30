@@ -231,7 +231,7 @@
           <button class="primary" id="signInBtn" style="flex:1;">Connexion</button>
           <button class="ghost" id="signUpBtn" style="flex:1;">Créer un compte</button>
         </div>
-        <p class="help-text" style="text-align:center;margin-top:6px;">Un compte et un abonnement actif sont requis pour jouer.</p>
+        <button class="ghost" id="guestBtn" style="width:100%;">Continuer en invité (2 joueurs, 1 dé, sans historique)</button>
         <p class="help-text" id="authStatus"></p>
       </div>
 
@@ -1010,6 +1010,7 @@ function showGameUi(){
   document.getElementById("onlinePanel").style.display="none";
   const onlineBtn = document.getElementById("modeOnlineBtn");
   if(onlineBtn) onlineBtn.style.display = isGuest ? "none" : "flex";
+  applyGuestRestrictions();
 }
 function showAuthUi(){
   document.getElementById("authPanel").style.display="block";
@@ -1123,8 +1124,39 @@ document.getElementById("signInBtn").addEventListener("click", async ()=>{
   await handleAuthedSession(data.user);
 });
 
-// Le mode invité a été retiré : un compte + abonnement actif sont
-// désormais obligatoires pour jouer, en local comme en ligne.
+document.getElementById("guestBtn").addEventListener("click", ()=>{
+  isGuest = true; currentUser = null; currentProfile = null;
+  refreshUserBar();
+  showGameUi();
+  setAuthStatus("");
+});
+
+// Mode invité limité : exactement 2 joueurs actifs (vert + jaune, humain ou
+// ordinateur uniquement) et 1 seul dé imposé. Les images sponsor (cases,
+// bercails, plateau, logo) restent visibles pour tout le monde, invité inclus.
+function applyGuestRestrictions(){
+  seatsList.querySelectorAll("select").forEach(sel=>{
+    const isAllowedSeat = (sel.dataset.color==="green" || sel.dataset.color==="yellow");
+    if(isGuest){
+      if(isAllowedSeat){
+        Array.from(sel.options).forEach(o=>{ o.disabled = (o.value==="off"); });
+        if(sel.value==="off") sel.value="human";
+        sel.disabled=false;
+      } else {
+        sel.value="off";
+        sel.disabled=true;
+      }
+    } else {
+      sel.disabled=false;
+      Array.from(sel.options).forEach(o=> o.disabled=false);
+    }
+  });
+  const diceSel = document.getElementById("diceMode");
+  if(diceSel){
+    diceSel.disabled = !!isGuest;
+    if(isGuest) diceSel.value="1";
+  }
+}
 
 document.getElementById("logoutBtn").addEventListener("click", async ()=>{
   if(supabaseReady && currentUser) await supabaseClient.auth.signOut();
@@ -1570,6 +1602,9 @@ document.getElementById("helpBtn").addEventListener("click", ()=>{
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🤖 Joueurs virtuels (ordinateur)</p>
       <p>Chaque couleur peut être Humain, Ordinateur ou Inactive. Un ordinateur joue automatiquement, relance après un bonus, et enchaîne les tours sans intervention. S'il a le choix, il <b>ne rate jamais une capture possible</b> — il la joue toujours en priorité sur tout autre coup disponible.</p>
+
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">👤 Mode invité</p>
+      <p>Sans créer de compte, une partie locale limitée à <b>2 joueurs</b> (vert et jaune, humain ou ordinateur) et <b>1 seul dé</b> reste accessible, sans historique ni mode en ligne. Les images sponsor (cases, bercails, plateau, logo) restent visibles pour tous, y compris en mode invité.</p>
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🌐 Partie en ligne</p>
       <p><b>Réservé aux comptes abonnés</b>. Créez un salon (code à 6 caractères) ou rejoignez-en un existant. Chaque joueur réserve une couleur ; l'hôte peut assigner les couleurs restantes à des ordinateurs. L'état de la partie est synchronisé en temps réel entre tous les participants — sans validation serveur, c'est un canal de confiance entre les joueurs du salon.</p>
