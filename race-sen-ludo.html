@@ -234,6 +234,23 @@
         <p class="help-text" id="authStatus"></p>
       </div>
 
+      <div class="panel" id="paywallPanel" style="display:none;">
+        <h3>💳 Abonnement RACE-SEN-LUDO</h3>
+        <p class="help-text">L'accès complet coûte <b>1000 FCFA / an</b> (Sénégal). Payez via le QR code Wave ci-dessous, puis notifiez l'administrateur pour activer votre compte.</p>
+        <div id="paywallQrWrap" style="text-align:center;margin:10px 0;"></div>
+        <p class="help-text" style="border-top:1px dashed rgba(217,164,65,0.3);padding-top:8px;margin-top:8px;">
+          <b>En dehors du Sénégal ?</b> Contactez
+          <a href="mailto:contact@race-senegal.sn" style="color:var(--gold);">contact@race-senegal.sn</a>
+          ou téléchargez l'application payante sur l'App Store ou Google Play (4,99 $ / an).
+        </p>
+        <label class="help-text" style="display:block;margin-bottom:4px;">Référence de paiement (optionnel)</label>
+        <input type="text" id="paywallNote" placeholder="Ex: référence Wave, numéro de téléphone…" style="margin-bottom:8px;">
+        <button class="primary" id="paywallNotifyBtn" style="width:100%;margin-bottom:8px;">✅ J'ai payé — notifier l'administrateur</button>
+        <button class="ghost" id="paywallRecheckBtn" style="width:100%;margin-bottom:8px;">🔄 Vérifier mon abonnement</button>
+        <p class="help-text" id="paywallStatus"></p>
+        <button class="ghost" id="paywallLogoutBtn" style="width:100%;">Déconnexion</button>
+      </div>
+
       <div class="panel" id="modeSwitchPanel" style="display:none;">
         <div style="display:flex;gap:8px;">
           <button class="primary" id="modeLocalBtn" style="flex:1;">🎲 Partie locale</button>
@@ -394,7 +411,7 @@ function progressFromGlobal(color, idx){ // inverse
 
 // ---- Game state ----
 let state = null;
-let sponsorCfg = { cellImg:"", boardImg:"", centerImg:"", playlist:[], cellImages:{}, yardImages:{} };
+let sponsorCfg = { cellImg:"", boardImg:"", centerImg:"", playlist:[], cellImages:{}, yardImages:{}, waveQrUrl:"" };
 
 function freshPawn(color, id){
   return { color, id, state:"yard", progress:0, invade:null, capturedBy:null };
@@ -982,27 +999,52 @@ function refreshUserBar(){
 
 function showGameUi(){
   document.getElementById("authPanel").style.display="none";
+  document.getElementById("paywallPanel").style.display="none";
   document.getElementById("modeSwitchPanel").style.display="block";
   document.getElementById("setupPanel").style.display="block";
   document.getElementById("onlinePanel").style.display="none";
 }
 function showAuthUi(){
   document.getElementById("authPanel").style.display="block";
+  document.getElementById("paywallPanel").style.display="none";
   document.getElementById("modeSwitchPanel").style.display="none";
   document.getElementById("setupPanel").style.display="none";
   document.getElementById("onlinePanel").style.display="none";
   document.getElementById("gamePanel").style.display="none";
   document.getElementById("logPanel").style.display="none";
 }
+function showPaywall(){
+  document.getElementById("authPanel").style.display="none";
+  document.getElementById("paywallPanel").style.display="block";
+  document.getElementById("modeSwitchPanel").style.display="none";
+  document.getElementById("setupPanel").style.display="none";
+  document.getElementById("onlinePanel").style.display="none";
+  document.getElementById("gamePanel").style.display="none";
+  document.getElementById("logPanel").style.display="none";
+  renderPaywallQr();
+}
+function renderPaywallQr(){
+  const wrap = document.getElementById("paywallQrWrap");
+  if(!wrap) return;
+  wrap.innerHTML = sponsorCfg.waveQrUrl
+    ? `<img src="${sponsorCfg.waveQrUrl}" alt="QR Wave" style="max-width:220px;border-radius:10px;border:2px solid var(--gold);">`
+    : `<p class="help-text">QR code de paiement pas encore configuré par l'administrateur.</p>`;
+}
+function isSubscriptionActive(profile){
+  if(!profile) return false;
+  if(profile.role==="admin") return true; // les admins ne sont jamais soumis au paywall
+  if(!profile.subscription_active_until) return false;
+  return new Date(profile.subscription_active_until).getTime() > Date.now();
+}
 
 async function fetchOrCreateProfile(userId){
   if(!supabaseReady) return {role:"player"};
   try{
-    let { data, error } = await supabaseClient.from("profiles").select("role").eq("id", userId).single();
+    let { data, error } = await supabaseClient.from("profiles").select("role,subscription_active_until").eq("id", userId).single();
     if(data) return data; // lecture réussie : on ne touche à rien, on renvoie le vrai rôle tel quel
     if(error && error.code==="PGRST116"){
       // "PGRST116" = aucune ligne trouvée : le profil n'existe vraiment pas encore, on le crée
-      const ins = await supabaseClient.from("profiles").upsert({id:userId, role:"player"}).select("role").single();
+      const ins = await supabaseClient.from("profiles").upsert({id:userId, role:"player"}).select("role,subscription_active_until").single();
       return ins.data || {role:"player"};
     }
     // toute AUTRE erreur (réseau, RLS, etc.) : ne jamais écrire en base, juste un repli local
@@ -1019,8 +1061,34 @@ async function handleAuthedSession(user){
   isGuest = false;
   currentProfile = await fetchOrCreateProfile(user.id);
   refreshUserBar();
-  showGameUi();
+  if(isSubscriptionActive(currentProfile)){
+    showGameUi();
+  } else {
+    showPaywall();
+  }
 }
+
+document.getElementById("paywallNotifyBtn").addEventListener("click", async ()=>{
+  const statusEl = document.getElementById("paywallStatus");
+  if(!supabaseReady || !currentUser){ statusEl.textContent="Non connecté."; return; }
+  try{
+    await supabaseClient.from("subscription_requests").insert({
+      user_id: currentUser.id, note: document.getElementById("paywallNote").value.trim()
+    });
+    statusEl.textContent="Demande envoyée — l'administrateur activera votre compte sous peu.";
+  }catch(e){ statusEl.textContent="Erreur : "+e.message; }
+});
+document.getElementById("paywallRecheckBtn").addEventListener("click", async ()=>{
+  const statusEl = document.getElementById("paywallStatus");
+  currentProfile = await fetchOrCreateProfile(currentUser.id);
+  refreshUserBar();
+  if(isSubscriptionActive(currentProfile)){
+    showGameUi();
+  } else {
+    statusEl.textContent="Abonnement toujours inactif pour l'instant.";
+  }
+});
+document.getElementById("paywallLogoutBtn").addEventListener("click", ()=> document.getElementById("logoutBtn").click());
 
 document.getElementById("signUpBtn").addEventListener("click", async ()=>{
   if(!supabaseReady){ setAuthStatus("Backend Supabase non configuré (voir SUPABASE_URL/KEY dans le code)."); return; }
@@ -1079,13 +1147,14 @@ async function loadSponsorConfig(){
   const statusEl = document.getElementById("sponsorStatusText");
   if(!supabaseReady){ if(statusEl) statusEl.textContent="Backend Supabase non configuré (aucun habillage appliqué)."; return; }
   try{
-    const { data, error } = await supabaseClient.from("sponsor_config").select("cell_img,board_img,center_img,playlist,cell_images,yard_images").eq("id",1).single();
+    const { data, error } = await supabaseClient.from("sponsor_config").select("cell_img,board_img,center_img,playlist,cell_images,yard_images,wave_qr_url").eq("id",1).single();
     if(error || !data){ if(statusEl) statusEl.textContent="Aucune configuration sponsor définie pour l'instant."; return; }
-    sponsorCfg = { cellImg:data.cell_img||"", boardImg:data.board_img||"", centerImg:data.center_img||"", playlist:data.playlist||[], cellImages:data.cell_images||{}, yardImages:data.yard_images||{} };
+    sponsorCfg = { cellImg:data.cell_img||"", boardImg:data.board_img||"", centerImg:data.center_img||"", playlist:data.playlist||[], cellImages:data.cell_images||{}, yardImages:data.yard_images||{}, waveQrUrl:data.wave_qr_url||"" };
     if(statusEl) statusEl.textContent="Configuration sponsor chargée.";
   }catch(e){ if(statusEl) statusEl.textContent="Aucune configuration sponsor définie pour l'instant."; }
   renderBoard();
   renderPlaylistUi();
+  renderPaywallQr();
 }
 
 async function saveSponsorConfig(cfg){
@@ -1095,7 +1164,7 @@ async function saveSponsorConfig(cfg){
     try{
       const { error } = await supabaseClient.from("sponsor_config").upsert({
         id:1, cell_img:cfg.cellImg, board_img:cfg.boardImg, center_img:cfg.centerImg, playlist:cfg.playlist||[],
-        cell_images:cfg.cellImages||{}, yard_images:cfg.yardImages||{},
+        cell_images:cfg.cellImages||{}, yard_images:cfg.yardImages||{}, wave_qr_url:cfg.waveQrUrl||"",
         updated_by: currentUser.id, updated_at: new Date().toISOString()
       });
       if(error) throw error;
@@ -1109,6 +1178,7 @@ async function saveSponsorConfig(cfg){
   }
   renderBoard();
   renderPlaylistUi();
+  renderPaywallQr();
 }
 
 // Enregistre uniquement l'image d'UNE case (fusion, sans écraser les autres cases déjà configurées).
@@ -1177,6 +1247,7 @@ function openAdminForm(){
       ${fieldBlock("Image générique des cases", "admCell", "admCellFile", sponsorCfg.cellImg)}
       ${fieldBlock("Fond du plateau", "admBoard", "admBoardFile", sponsorCfg.boardImg)}
       ${fieldBlock("Logo central", "admCenter", "admCenterFile", sponsorCfg.centerImg)}
+      ${fieldBlock("QR code Wave Business (paiement 1000 XOF/an)", "admWaveQr", "admWaveQrFile", sponsorCfg.waveQrUrl)}
       <p class="help-text" id="admUploadStatus" style="margin-bottom:10px;"></p>
       <label class="help-text" style="display:block;margin-bottom:4px;">Playlist musicale — une ligne par morceau : Titre|URL</label>
       <textarea id="admPlaylist" rows="4" style="width:100%;margin:0 0 10px;background:#0e2a26;color:var(--sand);border:1px solid rgba(217,164,65,0.4);border-radius:8px;padding:6px;">${playlistText}</textarea>
@@ -1184,12 +1255,14 @@ function openAdminForm(){
     <button class="primary" id="admSave" style="width:100%;">Enregistrer (partagé)</button>
     <button class="ghost" id="admCellImageBtn" style="width:100%;margin-top:8px;">🖼️ Personnaliser une case précise</button>
     <button class="ghost" id="admYardImageBtn" style="width:100%;margin-top:8px;">🏠 Personnaliser un bercail</button>
+    <button class="ghost" id="admSubsBtn" style="width:100%;margin-top:8px;">💳 Gérer les abonnements</button>
     <button class="ghost" id="admTournamentBtn" style="width:100%;margin-top:8px;">🏆 Créer un tournoi du mois</button>
     <button class="ghost" id="admClose" style="width:100%;margin-top:6px;">Fermer</button>
   `);
   wireImageUploader("admCellFile", "admCell", "admUploadStatus", "board-cellimg");
   wireImageUploader("admBoardFile", "admBoard", "admUploadStatus", "board-bg");
   wireImageUploader("admCenterFile", "admCenter", "admUploadStatus", "board-center");
+  wireImageUploader("admWaveQrFile", "admWaveQr", "admUploadStatus", "wave-qr");
   document.getElementById("admSave").addEventListener("click", async ()=>{
     const playlist = document.getElementById("admPlaylist").value.split("\n")
       .map(l=>l.trim()).filter(Boolean)
@@ -1198,6 +1271,7 @@ function openAdminForm(){
       cellImg: document.getElementById("admCell").value.trim(),
       boardImg: document.getElementById("admBoard").value.trim(),
       centerImg: document.getElementById("admCenter").value.trim(),
+      waveQrUrl: document.getElementById("admWaveQr").value.trim(),
       playlist
     });
     await saveSponsorConfig(cfg);
@@ -1207,6 +1281,7 @@ function openAdminForm(){
   document.getElementById("admTournamentBtn").addEventListener("click", openTournamentForm);
   document.getElementById("admCellImageBtn").addEventListener("click", openCellImageForm);
   document.getElementById("admYardImageBtn").addEventListener("click", openYardImageForm);
+  document.getElementById("admSubsBtn").addEventListener("click", openSubscriptionAdminForm);
 }
 
 // Branche un input file : dès qu'un fichier est choisi, il est envoyé vers Supabase
@@ -1328,6 +1403,56 @@ function openYardImageForm(){
   document.getElementById("yardImgBack").addEventListener("click", openAdminForm);
 }
 
+// Espace admin : voir les demandes d'activation d'abonnement en attente,
+// les approuver (active 1 an), ou activer directement un compte par email.
+async function openSubscriptionAdminForm(){
+  showModal(`
+    <h3>💳 Gestion des abonnements</h3>
+    <div style="text-align:left;">
+      <p class="help-text">Pour activer un compte sans passer par une demande, utilise le SQL Editor Supabase :</p>
+      <div style="background:#0e2a26;border:1px solid rgba(217,164,65,0.4);border-radius:8px;padding:8px;font-size:0.72rem;font-family:monospace;white-space:pre-wrap;margin-bottom:14px;">update public.profiles set subscription_active_until = now() + interval '1 year'
+where id = (select id from auth.users where email = 'EMAIL_DU_COMPTE');</div>
+      <h4 style="color:var(--gold);margin:10px 0 6px;">Demandes en attente</h4>
+      <div id="subReqList" style="max-height:260px;overflow-y:auto;"><p class="help-text">Chargement…</p></div>
+    </div>
+    <button class="ghost" id="subBack" style="width:100%;margin-top:10px;">Retour</button>
+  `);
+  document.getElementById("subBack").addEventListener("click", openAdminForm);
+  await renderSubscriptionRequestsList();
+}
+
+async function renderSubscriptionRequestsList(){
+  const box = document.getElementById("subReqList");
+  try{
+    const { data, error } = await supabaseClient.from("subscription_requests")
+      .select("id,user_id,note,created_at").eq("status","pending").order("created_at",{ascending:true});
+    if(error) throw error;
+    if(!data || !data.length){ box.innerHTML = `<p class="help-text">Aucune demande en attente.</p>`; return; }
+    const userIds = [...new Set(data.map(r=>r.user_id))];
+    const { data: profiles } = await supabaseClient.from("profiles").select("id,display_name").in("id", userIds);
+    const nameOf = {}; (profiles||[]).forEach(p=> nameOf[p.id]=p.display_name||p.id);
+    box.innerHTML = data.map(r=>`
+      <div style="border:1px solid rgba(217,164,65,0.25);border-radius:8px;padding:8px;margin-bottom:8px;">
+        <div><b>${nameOf[r.user_id]||r.user_id}</b> — ${new Date(r.created_at).toLocaleString('fr-FR')}</div>
+        ${r.note ? `<div class="help-text">Note : ${r.note}</div>` : ""}
+        <button class="primary" data-reqid="${r.id}" data-userid="${r.user_id}" style="width:100%;margin-top:6px;">✅ Activer 1 an</button>
+      </div>
+    `).join("");
+    box.querySelectorAll("button[data-reqid]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const reqId = btn.dataset.reqid, userId = btn.dataset.userid;
+        const until = new Date(Date.now() + 365*24*3600*1000).toISOString();
+        try{
+          await supabaseClient.from("profiles").update({subscription_active_until: until}).eq("id", userId);
+          await supabaseClient.from("subscription_requests").update({status:"approved", handled_at:new Date().toISOString(), handled_by:currentUser.id}).eq("id", reqId);
+          await logAdminAction("approve_subscription", {userId, until});
+          renderSubscriptionRequestsList();
+        }catch(e){ alert("Échec de l'activation : "+e.message); }
+      });
+    });
+  }catch(e){ box.innerHTML = `<p class="help-text">Impossible de charger les demandes : ${e.message}</p>`; }
+}
+
 function openTournamentForm(){
   showModal(`
     <h3>🏆 Nouveau tournoi sponsorisé</h3>
@@ -1446,8 +1571,11 @@ document.getElementById("helpBtn").addEventListener("click", ()=>{
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🌐 Partie en ligne</p>
       <p>Créez un salon (code à 6 caractères) ou rejoignez-en un existant. Chaque joueur réserve une couleur ; l'hôte peut assigner les couleurs restantes à des ordinateurs. L'état de la partie est synchronisé en temps réel entre tous les participants — sans validation serveur, c'est un canal de confiance entre les joueurs du salon.</p>
 
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">💳 Abonnement</p>
+      <p>L'accès complet coûte <b>1000 FCFA par an au Sénégal</b> (paiement via QR code Wave Business, activation manuelle par l'admin) — ou <b>4,99 $ par an</b> ailleurs dans le monde via un abonnement intégré sur l'App Store ou Google Play. Après connexion, un compte non abonné voit un écran de paiement adapté ; les admins ne sont jamais soumis à cette limite.</p>
+
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🛠️ Administration (compte admin uniquement)</p>
-      <p>Habillage sponsor (image générique des cases, fond du plateau, logo central — par URL ou upload direct d'un fichier), <b>image personnalisée pour une case précise</b> parmi les 52 du plateau, <b>image personnalisée pour un bercail précis</b> (une des 4 zones de départ), playlist musicale (lue par tous les joueurs), et création de tournois sponsorisés mensuels avec classement des victoires. Tout l'historique (parties, coups joués, actions admin) est journalisé.</p>
+      <p>Habillage sponsor (image générique des cases, fond du plateau, logo central — par URL ou upload direct d'un fichier), <b>image personnalisée pour une case précise</b> parmi les 52 du plateau, <b>image personnalisée pour un bercail précis</b> (une des 4 zones de départ), <b>QR code Wave et gestion des abonnements</b>, playlist musicale (lue par tous les joueurs), et création de tournois sponsorisés mensuels avec classement des victoires. Tout l'historique (parties, coups joués, actions admin) est journalisé.</p>
 
       <p style="opacity:0.7;margin-top:10px;"><i>Certains de ces points ne sont pas standardisés dans le Ludo classique : ce sont des interprétations raisonnables des règles demandées au fil de nos échanges — n'hésitez pas à demander d'autres ajustements.</i></p>
     </div>
