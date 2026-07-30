@@ -50,7 +50,15 @@
   header.top h1{font-size:1.55rem;color:var(--sand);letter-spacing:1px;}
   header.top .tag{font-size:0.78rem;opacity:0.75;letter-spacing:1.5px;text-transform:uppercase;}
   .layout{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:22px;}
-  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;gap:14px;}
+    .app{padding:14px 10px 40px;}
+    header.top h1{font-size:1.2rem;}
+    header.top .tag{font-size:0.65rem;}
+    .panel{padding:12px 12px 14px;}
+    .board-wrap{margin:0 -4px;}
+  }
+  .log-collapsed .log{display:none;}
   .panel{
     background:var(--panel-bg);
     border:1px solid rgba(217,164,65,0.35);
@@ -248,7 +256,9 @@
         <div id="tournamentInfo" class="help-text"></div>
         <div id="tournamentLeaderboard" style="margin-top:8px;"></div>
       </div>
+    </div>
 
+    <div>
       <div class="panel" id="gamePanel" style="display:none;">
         <h3>Tour de jeu</h3>
         <div class="turn-banner" id="turnBanner"></div>
@@ -260,16 +270,17 @@
         <p class="help-text" id="turnHint"></p>
       </div>
 
-      <div class="panel" id="logPanel" style="display:none;">
-        <h3>Journal</h3>
-        <div class="log" id="log"></div>
-      </div>
-    </div>
-
-    <div>
       <div class="board-wrap">
         <svg id="board" viewBox="0 0 600 600" width="600" height="600"></svg>
         <div class="dice-tray" id="diceZone"></div>
+      </div>
+
+      <div class="panel" id="logPanel" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" id="logToggleHeader">
+          <h3 style="margin:0;">Journal</h3>
+          <span class="help-text" id="logToggleIcon">▾</span>
+        </div>
+        <div class="log" id="log"></div>
       </div>
     </div>
   </div>
@@ -1954,6 +1965,22 @@ function renderLog(){
   if(!state) return;
   el.innerHTML = state.log.slice(0,40).map(m=>`<div>${m}</div>`).join("");
 }
+
+// Journal repliable : replié par défaut sur petit écran pour ne pas pousser le
+// plateau, dépliable au clic sur son en-tête.
+let logCollapsed = window.innerWidth <= 900;
+function applyLogCollapsedState(){
+  const panel = document.getElementById("logPanel");
+  const icon = document.getElementById("logToggleIcon");
+  if(!panel) return;
+  panel.classList.toggle("log-collapsed", logCollapsed);
+  if(icon) icon.textContent = logCollapsed ? "▸" : "▾";
+}
+document.getElementById("logToggleHeader").addEventListener("click", ()=>{
+  logCollapsed = !logCollapsed;
+  applyLogCollapsedState();
+});
+applyLogCollapsedState();
 
 function showWinner(){
   const ranking = computeFinalRanking();
