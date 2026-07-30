@@ -1030,6 +1030,17 @@ function showPaywall(){
   document.getElementById("gamePanel").style.display="none";
   document.getElementById("logPanel").style.display="none";
   renderPaywallQr();
+  // Filet de sécurité : si l'affichage du paywall venait d'une lecture de profil
+  // ratée juste après la connexion, on revérifie une fois en silence peu après.
+  setTimeout(async ()=>{
+    if(!currentUser) return;
+    const fresh = await fetchOrCreateProfile(currentUser.id);
+    if(isSubscriptionActive(fresh)){
+      currentProfile = fresh;
+      refreshUserBar();
+      showGameUi();
+    }
+  }, 1500);
 }
 function renderPaywallQr(){
   const wrap = document.getElementById("paywallQrWrap");
@@ -1045,7 +1056,7 @@ function isSubscriptionActive(profile){
   return new Date(profile.subscription_active_until).getTime() > Date.now();
 }
 
-async function fetchOrCreateProfile(userId){
+async function fetchOrCreateProfile(userId, isRetry){
   if(!supabaseReady) return {role:"player"};
   try{
     let { data, error } = await supabaseClient.from("profiles").select("role,subscription_active_until").eq("id", userId).single();
@@ -1055,11 +1066,22 @@ async function fetchOrCreateProfile(userId){
       const ins = await supabaseClient.from("profiles").upsert({id:userId, role:"player"}).select("role,subscription_active_until").single();
       return ins.data || {role:"player"};
     }
-    // toute AUTRE erreur (réseau, RLS, etc.) : ne jamais écrire en base, juste un repli local
-    console.warn("Lecture du profil impossible (repli local, rien n'est modifié en base) :", error);
+    // toute AUTRE erreur (réseau, RLS, etc.) : une seule nouvelle tentative après un court
+    // délai (souvent un simple aléa passager juste après la connexion), avant d'abandonner.
+    if(!isRetry){
+      console.warn("Lecture du profil impossible, nouvelle tentative dans 700ms :", error);
+      await new Promise(r=>setTimeout(r,700));
+      return fetchOrCreateProfile(userId, true);
+    }
+    console.warn("Lecture du profil impossible après nouvelle tentative (repli local, rien n'est modifié en base) :", error);
     return {role:"player"};
   }catch(e){
-    console.warn("Lecture du profil impossible (repli local, rien n'est modifié en base) :", e);
+    if(!isRetry){
+      console.warn("Lecture du profil impossible, nouvelle tentative dans 700ms :", e);
+      await new Promise(r=>setTimeout(r,700));
+      return fetchOrCreateProfile(userId, true);
+    }
+    console.warn("Lecture du profil impossible après nouvelle tentative (repli local, rien n'est modifié en base) :", e);
     return {role:"player"};
   }
 }
