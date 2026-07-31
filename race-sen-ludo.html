@@ -500,7 +500,17 @@ function possibleMovesForPawn(p, die){
 
   if(p.state==="invading"){
     if(die===6){
-      moves.push({type:"retreat"});
+      const newDepth = p.invade.depth - 1;
+      let blocked = false;
+      if(newDepth>0){
+        const st = stackInfo("homecol:"+p.invade.of+":"+newDepth);
+        if(st && st.color!==p.color && st.count>=2 && state.sixStreak < st.count) blocked = true;
+      } else {
+        const exitIdx = TURN_INDEX[p.invade.of];
+        const st = stackInfo("path:"+exitIdx);
+        if(st && st.color!==p.color && st.count>=2 && state.sixStreak < st.count) blocked = true;
+      }
+      if(!blocked) moves.push({type:"retreat"});
     } else {
       const newDepth = p.invade.depth + die;
       if(newDepth<=5){
@@ -664,8 +674,10 @@ function applyMove(p, die, move){
       p.invade=null;
       p.state="path";
       p.progress = progressFromGlobal(color, TURN_INDEX[of]);
+      captureAt("path:"+globalIndex(color,p.progress), p);
       logMsg(`${COLOR_LABEL[color]} ressort de la maison ennemie (double-six requis fait).`);
     } else {
+      captureAt("homecol:"+p.invade.of+":"+p.invade.depth, p);
       logMsg(`${COLOR_LABEL[color]} recule d'une case (six) dans la maison ennemie.`);
     }
   } else if(move.type==="continueLoop"){
@@ -1613,7 +1625,7 @@ document.getElementById("helpBtn").addEventListener("click", ()=>{
       <p>Deux pions ou plus d'une même couleur peuvent se superposer sur une case (hors case de départ). Un pion adverse ne peut ni la traverser ni s'y arrêter, sauf si le joueur a accumulé, durant son tour (grâce aux relances offertes par les 6), un nombre de <b>6</b> au moins égal au nombre de pions superposés. Réussir la traversée "consomme" ce compteur. La même règle protège un barrage posé pile sur une case de départ : il faut alors autant de six que de pions empilés pour sortir du bercail et avancer.</p>
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🏠 Invasion de couloir final</p>
-      <p>La case juste avant l'entrée du couloir final d'une couleur est une case commune. Un pion adverse qui s'y arrête peut, à son prochain déplacement, choisir d'<b>envahir</b> ce couloir (si la valeur du dé est ≤5) pour y capturer des pions isolés. Il ne peut pas terminer sa course dans ce couloir : pour en ressortir, il doit reculer case par case, chaque recul nécessitant un <b>6</b>, jusqu'à revenir sur la piste commune, où il reprend son parcours normal. Un barrage à l'intérieur du couloir envahi reste protégé par la même règle du nombre de six. Si un barrage bloque le chemin normal et que l'invasion est la seule option restante pour un dé, le joueur n'est jamais forcé : une flèche 🚫 permet de refuser et de sacrifier ce dé plutôt que d'envahir.</p>
+      <p>La case juste avant l'entrée du couloir final d'une couleur est une case commune. Un pion adverse qui s'y arrête peut, à son prochain déplacement, choisir d'<b>envahir</b> ce couloir (si la valeur du dé est ≤5) pour y capturer des pions isolés. Il ne peut pas terminer sa course dans ce couloir : pour en ressortir, il doit reculer case par case, chaque recul nécessitant un <b>6</b>, jusqu'à revenir sur la piste commune, où il reprend son parcours normal. <b>En reculant, s'il atterrit sur un pion isolé (y compris à la sortie, sur la piste commune), il le capture aussi.</b> Un barrage à l'intérieur du couloir envahi (ou sur la case de sortie) reste protégé par la même règle du nombre de six. Si un barrage bloque le chemin normal et que l'invasion est la seule option restante pour un dé, le joueur n'est jamais forcé : une flèche 🚫 permet de refuser et de sacrifier ce dé plutôt que d'envahir.</p>
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🛡️ Capture &amp; cases de départ</p>
       <p>Aucune case n'est totalement protégée — une capture est possible partout, tant qu'un seul pion adverse s'y trouve (pas de barrage). <b>Exception</b> : sur une case de départ, la capture n'est possible qu'en y arrivant avec un <b>six</b> (sortie de bercail, ou déplacement normal totalisant six) ; avec toute autre valeur, le pion adverse présent reste protégé sur cette case précise. <b>Autre exception</b> : une case personnalisée par le sponsor (image spécifique définie par l'admin) est une case protégée — aucune capture n'y est jamais possible, quel que soit le dé.</p>
