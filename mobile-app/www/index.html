@@ -765,9 +765,9 @@ function applyMove(p, die, move){
     logMsg(`${COLOR_LABEL[color]} refuse d'envahir la maison ennemie — ce dé est sacrifié.`);
   } else if(move.type==="release"){
     p.state="yard"; p.progress=0; p.capturedBy=null;
-    logMsg(`⛓️ Prison, ${COLOR_LABEL[color]}, Libéré !`);
-    speakPhrase(`Prison, ${COLOR_LABEL[color]}, Libéré !`);
-    spawnFloatingText(`Prison, ${COLOR_LABEL[color]}, Libéré !`);
+    logMsg(`⛓️ Prisonnier, ${COLOR_LABEL[color]}, Libéré !`);
+    speakPhrase(`Prisonnier, ${COLOR_LABEL[color]}, Libéré !`);
+    spawnFloatingText(`Prisonnier, ${COLOR_LABEL[color]}, Libéré !`);
   }
   if(move.type==="finish"){
     celebrateMoveSuccess();
