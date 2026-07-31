@@ -61,6 +61,7 @@
   header.top h1{font-size:1.55rem;color:var(--sand);letter-spacing:1px;}
   header.top .tag{font-size:0.78rem;opacity:0.75;letter-spacing:1.5px;text-transform:uppercase;}
   .layout{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:22px;}
+  .layout.layout-centered{grid-template-columns:minmax(280px,480px);justify-content:center;}
   @media (max-width:900px){
     .layout{grid-template-columns:1fr;gap:14px;}
     .app{padding:14px 10px 40px;}
@@ -219,7 +220,7 @@
     </div>
   </header>
 
-  <div class="layout">
+  <div class="layout" id="layoutRoot">
     <div>
       <div class="panel" id="authPanel">
         <h3>Compte joueur</h3>
@@ -771,6 +772,15 @@ function hideSetupPanels(){
     const el = document.getElementById(id);
     if(el) el.style.display="none";
   });
+  setLayoutCentered(false);
+}
+
+// Centre le contenu sur la page tant qu'aucune partie n'est réellement lancée
+// (écrans de connexion, paiement, configuration) — évite un contenu collé à
+// gauche avec un grand vide à droite.
+function setLayoutCentered(centered){
+  const layout = document.getElementById("layoutRoot");
+  if(layout) layout.classList.toggle("layout-centered", centered);
 }
 
 document.getElementById("startBtn").addEventListener("click", async ()=>{
@@ -1011,6 +1021,7 @@ function showGameUi(){
   const onlineBtn = document.getElementById("modeOnlineBtn");
   if(onlineBtn) onlineBtn.style.display = isGuest ? "none" : "flex";
   applyGuestRestrictions();
+  setLayoutCentered(true);
 }
 function showAuthUi(){
   document.getElementById("authPanel").style.display="block";
@@ -1020,6 +1031,7 @@ function showAuthUi(){
   document.getElementById("onlinePanel").style.display="none";
   document.getElementById("gamePanel").style.display="none";
   document.getElementById("logPanel").style.display="none";
+  setLayoutCentered(true);
 }
 function showPaywall(){
   document.getElementById("authPanel").style.display="none";
@@ -1030,6 +1042,7 @@ function showPaywall(){
   document.getElementById("gamePanel").style.display="none";
   document.getElementById("logPanel").style.display="none";
   renderPaywallQr();
+  setLayoutCentered(true);
   // Filet de sécurité : si l'affichage du paywall venait d'une lecture de profil
   // ratée juste après la connexion, on revérifie une fois en silence peu après.
   setTimeout(async ()=>{
@@ -2458,12 +2471,12 @@ function drawPawns(svg){
     const isPrisonGroup = group[0] && group[0].state==="captured";
     group.forEach((p, i)=>{
       const base = pawnScreenPos(p, i);
-      const jitter = (!isPrisonGroup && group.length>1) ? [[-7,-7],[7,-7],[-7,7],[7,7]][i%4] : [0,0];
+      const jitter = (!isPrisonGroup && group.length>1) ? [[-8,-8],[8,-8],[-8,8],[8,8]][i%4] : [0,0];
       const cx = base.x + CELL/2 + jitter[0];
       const cy = base.y + CELL/2 + jitter[1];
       const eligible = isEligiblePawn(p);
       const isCaptured = p.state==="captured";
-      const radius = isCaptured ? 10 : (group.length>1 ? 12 : 16);
+      const radius = isCaptured ? 13 : (group.length>1 ? 15 : 20);
       const g = buildPawnShape(cx, cy, p.color, radius, eligible, isCaptured);
       svg.appendChild(g);
       if(eligible){
