@@ -2489,12 +2489,12 @@ function drawPawns(svg){
     const isPrisonGroup = group[0] && group[0].state==="captured";
     group.forEach((p, i)=>{
       const base = pawnScreenPos(p, i);
-      const jitter = (!isPrisonGroup && group.length>1) ? [[-8,-8],[8,-8],[-8,8],[8,8]][i%4] : [0,0];
+      const jitter = (!isPrisonGroup && group.length>1) ? [[-6,-6],[6,-6],[-6,6],[6,6]][i%4] : [0,0];
       const cx = base.x + CELL/2 + jitter[0];
       const cy = base.y + CELL/2 + jitter[1];
       const eligible = isEligiblePawn(p);
       const isCaptured = p.state==="captured";
-      const radius = isCaptured ? 14 : (group.length>1 ? 16 : 22);
+      const radius = isCaptured ? 8.5 : (group.length>1 ? 10 : 13);
       const g = buildPawnShape(cx, cy, p.color, radius, eligible, isCaptured);
       svg.appendChild(g);
       if(eligible){
