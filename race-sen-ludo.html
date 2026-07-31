@@ -62,6 +62,12 @@
   header.top .tag{font-size:0.78rem;opacity:0.75;letter-spacing:1.5px;text-transform:uppercase;}
   .layout{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:22px;}
   .layout.layout-centered{grid-template-columns:minmax(280px,480px);justify-content:center;}
+  .active-yard-glow{ animation: yardPulse 1.4s ease-in-out infinite; }
+  @keyframes yardPulse{
+    0%{ opacity:0.4; stroke-width:4; }
+    50%{ opacity:1; stroke-width:7; }
+    100%{ opacity:0.4; stroke-width:4; }
+  }
   @media (max-width:900px){
     .layout{grid-template-columns:1fr;gap:14px;}
     .app{padding:14px 10px 40px;}
@@ -83,7 +89,6 @@
   body.fs-mode #sponsorStatusPanel,
   body.fs-mode #tournamentPanel,
   body.fs-mode #gamePanel,
-  body.fs-mode #logPanel { display:none !important; }
   body.fs-mode .app{ padding:10px; max-width:none; }
   body.fs-mode .layout{ grid-template-columns:1fr; gap:0; }
   body.fs-mode .board-wrap{
@@ -319,15 +324,16 @@
 
     <div>
       <div class="panel" id="gamePanel" style="display:none;">
-        <h3>Tour de jeu</h3>
-        <div class="turn-banner" id="turnBanner"></div>
         <div style="display:flex;gap:8px;">
           <button class="primary" id="rollBtn" style="flex:1;">🎲 Lancer le(s) dé(s)</button>
           <button class="ghost" id="soundToggle" title="Couper/activer le son des dés">🔊</button>
           <button class="ghost" id="soundTestBtn" title="Tester le son directement">🔈 Tester</button>
         </div>
         <p class="help-text" id="turnHint"></p>
-        <button class="ghost" id="fsToggleBtn" style="width:100%;margin-top:8px;">⛶ Mode plein écran (plateau + dés)</button>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="ghost" id="fsToggleBtn" style="flex:1;">⛶ Plein écran</button>
+          <button class="ghost" id="historyBtn" style="flex:1;">📜 Historique</button>
+        </div>
       </div>
 
       <div class="fs-header-row">
@@ -339,15 +345,10 @@
         <div class="dice-tray" id="diceZone"></div>
       </div>
 
-      <div class="panel" id="logPanel" style="display:none;">
-        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" id="logToggleHeader">
-          <h3 style="margin:0;">Journal</h3>
-          <span class="help-text" id="logToggleIcon">▾</span>
-        </div>
-        <div class="log" id="log"></div>
-      </div>
+      <div id="log" style="display:none;"></div>
     </div>
   </div>
+  <div class="fs-turn-indicator" id="turnBanner" style="display:none;"></div>
 
   <div class="footer-note">RACE-SEN-LUDO — jouez sur ludo.sn ou race-senegal.sn — historique des parties, habillage sponsor et tournois.<br>© 2026 R.A.C.E - Tous droits réservés</div>
 </div>
@@ -791,7 +792,6 @@ document.getElementById("startBtn").addEventListener("click", async ()=>{
   const diceMode = parseInt(document.getElementById("diceMode").value,10);
   state = newGame(seats, diceMode);
   document.getElementById("gamePanel").style.display="block";
-  document.getElementById("logPanel").style.display="block";
   hideSetupPanels();
   renderAll();
   await createGameRowInSupabase(seats, diceMode);
@@ -841,7 +841,6 @@ function subscribeOnlineChannel(code){
   channel.on("broadcast", {event:"state"}, ({payload})=>{
     state = payload;
     document.getElementById("gamePanel").style.display="block";
-    document.getElementById("logPanel").style.display="block";
     hideSetupPanels();
     renderAll();
   });
@@ -889,7 +888,6 @@ document.getElementById("leaveRoomBtn").addEventListener("click", ()=>{
   document.getElementById("onlineSetup").style.display="block";
   document.getElementById("onlineRoom").style.display="none";
   document.getElementById("gamePanel").style.display="none";
-  document.getElementById("logPanel").style.display="none";
 });
 
 function renderSeatClaims(){
@@ -953,7 +951,6 @@ document.getElementById("onlineStartBtn").addEventListener("click", async ()=>{
   const diceMode = parseInt(document.getElementById("onlineDiceMode").value,10);
   state = newGame(seats, diceMode);
   document.getElementById("gamePanel").style.display="block";
-  document.getElementById("logPanel").style.display="block";
   hideSetupPanels();
   renderAll();
   await createGameRowInSupabase(seats, diceMode);
@@ -1030,7 +1027,6 @@ function showAuthUi(){
   document.getElementById("setupPanel").style.display="none";
   document.getElementById("onlinePanel").style.display="none";
   document.getElementById("gamePanel").style.display="none";
-  document.getElementById("logPanel").style.display="none";
   setLayoutCentered(true);
 }
 function showPaywall(){
@@ -1040,7 +1036,6 @@ function showPaywall(){
   document.getElementById("setupPanel").style.display="none";
   document.getElementById("onlinePanel").style.display="none";
   document.getElementById("gamePanel").style.display="none";
-  document.getElementById("logPanel").style.display="none";
   renderPaywallQr();
   setLayoutCentered(true);
   // Filet de sécurité : si l'affichage du paywall venait d'une lecture de profil
@@ -2241,21 +2236,19 @@ function renderLog(){
   el.innerHTML = state.log.slice(0,40).map(m=>`<div>${m}</div>`).join("");
 }
 
-// Journal repliable : replié par défaut sur petit écran pour ne pas pousser le
-// plateau, dépliable au clic sur son en-tête.
-let logCollapsed = window.innerWidth <= 900;
-function applyLogCollapsedState(){
-  const panel = document.getElementById("logPanel");
-  const icon = document.getElementById("logToggleIcon");
-  if(!panel) return;
-  panel.classList.toggle("log-collapsed", logCollapsed);
-  if(icon) icon.textContent = logCollapsed ? "▸" : "▾";
-}
-document.getElementById("logToggleHeader").addEventListener("click", ()=>{
-  logCollapsed = !logCollapsed;
-  applyLogCollapsedState();
+// Le journal n'est plus affiché en permanence : un bouton "📜 Historique"
+// l'ouvre à la demande dans une fenêtre, pour ne pas encombrer l'écran.
+document.getElementById("historyBtn").addEventListener("click", ()=>{
+  const entries = state ? state.log.slice(0,60) : [];
+  const html = entries.length
+    ? entries.map(m=>`<div style="border-bottom:1px dotted rgba(217,164,65,0.25);padding:4px 0;text-align:left;">${m}</div>`).join("")
+    : `<p class="help-text">Aucun coup joué pour l'instant.</p>`;
+  showModal(`
+    <h3>📜 Historique de la partie</h3>
+    <div style="max-height:60vh;overflow-y:auto;font-size:0.8rem;margin:10px 0;">${html}</div>
+    <button class="primary" onclick="closeModal()" style="width:100%;">Fermer</button>
+  `);
 });
-applyLogCollapsedState();
 
 function showWinner(){
   const ranking = computeFinalRanking();
@@ -2309,6 +2302,12 @@ function renderBoard(){
     const [r0,c0] = yardBox[c];
     const p = rc(r0,c0);
     svg.appendChild(el("rect",{x:p.x,y:p.y,width:6*CELL,height:6*CELL,fill:COLOR_HEX[c],opacity:0.85,rx:14}));
+    if(state && !state.winner && c===currentColor()){
+      svg.appendChild(el("rect",{
+        x:p.x-3,y:p.y-3,width:6*CELL+6,height:6*CELL+6,rx:16,
+        fill:"none",stroke:"#fff","stroke-width":5,class:"active-yard-glow"
+      }));
+    }
     svg.appendChild(el("rect",{x:p.x+18,y:p.y+18,width:6*CELL-36,height:6*CELL-36,fill:"#f3e6c9",rx:10}));
     const yardImg = (sponsorCfg.yardImages||{})[c];
     if(yardImg){
