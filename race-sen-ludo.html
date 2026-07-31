@@ -1758,54 +1758,50 @@ document.getElementById("helpBtn").addEventListener("click", ()=>{
   showModal(`
     <h3>Règles &amp; fonctionnement de RACE-SEN-LUDO</h3>
 
-    <div style="text-align:left;font-size:0.85rem;line-height:1.55;max-height:65vh;overflow-y:auto;">
-      <p style="color:var(--gold);font-weight:700;margin-bottom:2px;">🎲 Déplacements de base</p>
-      <p>4 couleurs : vert, jaune, bleu, rouge — c'est aussi l'ordre des tours. Chaque pion part de son bercail, parcourt 51 cases communes, puis 5 cases de son couloir final avant d'arriver à la maison (case centrale). Un <b>6</b> est nécessaire pour sortir un pion du bercail.</p>
+    <div style="text-align:left;font-size:0.85rem;line-height:1.6;max-height:65vh;overflow-y:auto;">
 
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🎯 Un seul pion en jeu</p>
-      <p>Si un seul pion d'une couleur est déjà sorti du bercail et qu'aucun 6 n'est obtenu au lancer, ce pion avance automatiquement de la somme des dés — pas besoin de choisir manuellement. Si un choix ambigu se présente (ex : continuer ou envahir un couloir adverse) ou qu'un 6 sort, la main redevient manuelle. En mode 2 dés, si l'une des deux valeurs seule permet de capturer un pion adverse, cette capture est jouée en priorité avec ce seul dé plutôt que d'imposer la somme des deux — l'autre dé est alors sacrifié (non jouable pour ce pion).</p>
-      <p>En mode 1 dé (ou s'il ne reste qu'une seule valeur disponible en mode 2 dés), cliquez directement sur un pion éligible : pas besoin de sélectionner le dé au préalable.</p>
+      <p style="color:var(--gold);font-weight:700;margin-bottom:2px;">🎲 Comment jouer</p>
+      <p>4 couleurs jouent chacune leur tour, dans cet ordre : vert → jaune → bleu → rouge. Chaque pion part du bercail, avance sur la piste commune, puis rentre dans son couloir final avant d'arriver à la maison. <b>Il faut un six pour sortir un pion du bercail.</b></p>
+      <p>Un seul pion sur le plateau et pas de six ? Il avance tout seul, pas besoin de choisir. En mode 1 dé (ou s'il ne reste qu'un seul dé), cliquez directement sur le pion à jouer.</p>
 
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🔀 Continuer ou rentrer dans son couloir</p>
-      <p>Arrivé au moment où il pourrait entrer dans son couloir final, un pion peut choisir de le faire pour finir sa course, <b>ou bien de poursuivre encore sur le chemin commun</b> pour un tour de plus, au lieu de rentrer. Les deux options sont proposées ensemble quand elles sont disponibles.</p>
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🔀 Un choix à faire ? Suivez les flèches</p>
+      <p>Quand plusieurs actions sont possibles pour un pion (continuer, entrer dans son couloir, envahir une maison adverse, refuser…), des flèches apparaissent directement sur le plateau à côté du pion. Cliquez sur celle que vous voulez.</p>
 
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🧱 Barrage</p>
-      <p>Deux pions ou plus d'une même couleur peuvent se superposer sur une case (hors case de départ). Un pion adverse ne peut ni la traverser ni s'y arrêter, sauf si le joueur a accumulé, durant son tour (grâce aux relances offertes par les 6), un nombre de <b>6</b> au moins égal au nombre de pions superposés. Réussir la traversée "consomme" ce compteur. La même règle protège un barrage posé pile sur une case de départ : il faut alors autant de six que de pions empilés pour sortir du bercail et avancer.</p>
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🧱 Le barrage</p>
+      <p>2 pions ou plus de la même couleur peuvent se poser sur la même case pour former un barrage. Un adversaire ne peut ni le traverser ni s'y arrêter, sauf s'il a obtenu, ce tour-ci, <b>autant de six qu'il y a de pions empilés</b>.</p>
 
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🏠 Invasion de couloir final</p>
-      <p>La case juste avant l'entrée du couloir final d'une couleur est une case commune. Un pion adverse qui s'y arrête peut, à son prochain déplacement, choisir d'<b>envahir</b> ce couloir (si la valeur du dé est ≤5) pour y capturer des pions isolés. Il ne peut pas terminer sa course dans ce couloir : pour en ressortir, il doit reculer case par case, chaque recul nécessitant un <b>6</b>, jusqu'à revenir sur la piste commune, où il reprend son parcours normal. <b>En reculant, s'il atterrit sur un pion isolé (y compris à la sortie, sur la piste commune), il le capture aussi.</b> Un barrage à l'intérieur du couloir envahi (ou sur la case de sortie) reste protégé par la même règle du nombre de six. Si un barrage bloque le chemin normal et que l'invasion est la seule option restante pour un dé, le joueur n'est jamais forcé : une flèche 🚫 permet de refuser et de sacrifier ce dé plutôt que d'envahir.</p>
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🏠 Envahir la maison d'un adversaire</p>
+      <p>Juste avant l'entrée du couloir final d'une couleur, tout le monde peut passer. Un pion adverse arrêté là peut choisir d'<b>y entrer</b> pour capturer un pion isolé à l'intérieur. Il ne peut pas y finir sa course : pour en ressortir, il recule case par case, et <b>chaque recul coûte un six</b>. En reculant, il capture aussi tout pion isolé rencontré sur son chemin.</p>
 
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🛡️ Capture &amp; cases de départ</p>
-      <p>Aucune case n'est totalement protégée — une capture est possible partout, tant qu'un seul pion adverse s'y trouve (pas de barrage). <b>Exception</b> : sur une case de départ, la capture n'est possible qu'en y arrivant avec un <b>six</b> (sortie de bercail, ou déplacement normal totalisant six) ; avec toute autre valeur, le pion adverse présent reste protégé sur cette case précise. <b>Autre exception</b> : une case personnalisée par le sponsor (image spécifique définie par l'admin) est une case protégée — aucune capture n'y est jamais possible, quel que soit le dé.</p>
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">✂️ Capturer un pion</p>
+      <p>Un pion seul (pas de barrage) peut être capturé n'importe où sur le plateau. <b>Exception</b> : sur une case de départ, il faut un six pour capturer. Une case personnalisée par le sponsor est toujours protégée.</p>
+      <p>Un pion capturé ne rentre pas directement chez lui : il devient <b>prisonnier dans le bercail de celui qui l'a attrapé</b> (🔒). Pour le libérer, son propriétaire doit payer un six.</p>
 
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">⛓️ Pions capturés (rançon)</p>
-      <p>Un pion capturé n'est pas renvoyé directement dans son propre bercail — il est emmené <b>prisonnier dans le bercail du capteur</b> (affiché en pointillés avec 🔒, aux côtés des pions de la couleur qui l'a capturé). Son propriétaire doit payer un <b>six</b> pour le racheter et le voir revenir dans son propre bercail, d'où il devra ressortir normalement avec un autre six.</p>
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🎲 1 ou 2 dés</p>
+      <p>Choisissez de jouer à 1 ou 2 dés avant de démarrer. Un six donne un lancer bonus — mais en mode 2 dés, il faut un <b>double-six</b> pour rejouer (un six mélangé à un autre chiffre ne redonne pas la main). Attention : cumuler <b>6 six</b> sur un même tour fait passer la main immédiatement.</p>
 
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🎲 Dés &amp; relances</p>
-      <p>Vous pouvez jouer à 1 ou 2 dés. Avec 2 dés, chaque valeur peut être attribuée séparément à un pion de votre choix (pas de cumul automatique, sauf cas du pion unique ci-dessus). En mode 1 dé, un 6 offre un lancer bonus. En mode 2 dés, seul un <b>double-six</b> offre un lancer bonus — un 6 mélangé à une autre valeur ne donne pas de relance, la main passe au joueur suivant une fois les deux dés utilisés. Dans tous les cas, si un joueur cumule <b>6 six</b> au total sur son tour (relances comprises), la main passe immédiatement, même en pleine série de bonus.</p>
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🔊 Sons &amp; ambiance</p>
+      <p>Bruit de dés, petit air de victoire ("Youpi !", "Tarawliss !"...), et une exclamation "damal nélawi" à chaque sortie de bercail réussie. Le bouton 🔊 coupe le son ; "🔈 Tester" vérifie que le son fonctionne bien dans votre navigateur.</p>
 
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🔊 Sons</p>
-      <p>Bruit de dés roulant sur une surface dure/verre généré en direct (aucun fichier audio externe). Un carillon "damal nélawi" retentit à chaque sortie réussie du bercail. Quand un pion termine sa course avec succès (arrivée à la maison), une exclamation dite à voix haute ("Youpi !", "Tarawliss !", "Tekkinaa !", "Reutj na !", "Waaw goor !" ou "Jaraama !", tirée au hasard) retentit, avec un texte flottant et un petit éclat façon pétard à l'écran. Le bouton 🔊/🔇 permet de couper le son ; "🔈 Tester" permet de vérifier que l'audio du navigateur est bien débloqué.</p>
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🎉 À la fin de la partie</p>
+      <p>Dès qu'une couleur ramène ses 4 pions à la maison, c'est gagné : confettis, ballons et classement complet s'affichent à l'écran.</p>
 
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🎉 Victoire finale</p>
-      <p>Quand une couleur ramène ses 4 pions à la maison, un écran de fête s'affiche avec le classement complet (les couleurs restantes sont classées selon leur progression sur le plateau), accompagné de confettis, de ballons multicolores qui s'envolent et d'applaudissements.</p>
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🤖 Jouer contre l'ordinateur</p>
+      <p>Chaque couleur peut être Humain, Ordinateur ou Inactive. L'ordinateur joue seul, ne rate jamais une capture possible, et enchaîne les tours automatiquement.</p>
 
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🤖 Joueurs virtuels (ordinateur)</p>
-      <p>Chaque couleur peut être Humain, Ordinateur ou Inactive. Un ordinateur joue automatiquement, relance après un bonus, et enchaîne les tours sans intervention. S'il a le choix, il <b>ne rate jamais une capture possible</b> — il la joue toujours en priorité sur tout autre coup disponible.</p>
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">👤 Sans créer de compte</p>
+      <p>Vous pouvez essayer une partie locale limitée à <b>2 joueurs</b> (vert et jaune) et <b>1 seul dé</b>, sans historique et sans mode en ligne.</p>
 
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">👤 Mode invité</p>
-      <p>Sans créer de compte, une partie locale limitée à <b>2 joueurs</b> (vert et jaune, humain ou ordinateur) et <b>1 seul dé</b> reste accessible, sans historique ni mode en ligne. Les images sponsor (cases, bercails, plateau, logo) restent visibles pour tous, y compris en mode invité.</p>
-
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🌐 Partie en ligne</p>
-      <p><b>Réservé aux comptes abonnés</b>. Créez un salon (code à 6 caractères) ou rejoignez-en un existant. Chaque joueur réserve une couleur ; l'hôte peut assigner les couleurs restantes à des ordinateurs. L'état de la partie est synchronisé en temps réel entre tous les participants — sans validation serveur, c'est un canal de confiance entre les joueurs du salon.</p>
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🌐 Jouer en ligne avec des amis</p>
+      <p>Réservé aux comptes abonnés. Créez un salon et partagez son code, ou rejoignez celui d'un ami. Chaque joueur choisit sa couleur, et la partie se joue en temps réel pour tout le monde.</p>
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">💳 Abonnement</p>
-      <p>L'accès complet coûte <b>1000 FCFA par an au Sénégal</b> (paiement via QR code Wave Business, activation manuelle par l'admin), ou via un abonnement intégré à <b>2,99 $ par an au Sénégal</b> / <b>4,99 $ par an ailleurs dans le monde</b> sur l'App Store ou Google Play. Après connexion, un compte non abonné voit un écran de paiement adapté ; les admins ne sont jamais soumis à cette limite.</p>
+      <p>1000 FCFA/an au Sénégal (paiement par QR code Wave), ou via l'App Store / Google Play : 2,99 $/an au Sénégal, 4,99 $/an ailleurs.</p>
 
-      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🛠️ Administration (compte admin uniquement)</p>
-      <p>Habillage sponsor (image générique des cases, fond du plateau, logo central — par URL ou upload direct d'un fichier), <b>image personnalisée pour une case précise</b> parmi les 52 du plateau, <b>image personnalisée pour un bercail précis</b> (une des 4 zones de départ), <b>QR code Wave et gestion des abonnements</b>, playlist musicale (lue par tous les joueurs, ajoutable par URL ou upload direct de fichiers audio), et création de tournois sponsorisés mensuels avec <b>sélection des participants parmi les comptes déjà inscrits</b> (le classement n'affiche que les joueurs officiellement choisis par l'admin). Tout l'historique (parties, coups joués, actions admin) est journalisé.</p>
+      <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🛠️ Pour les administrateurs</p>
+      <p>Personnalisation du plateau (cases, bercails, plateau entier, logo), playlist musicale, gestion des demandes d'abonnement, et création de tournois avec sélection des participants parmi les comptes inscrits.</p>
 
-      <p style="opacity:0.7;margin-top:10px;"><i>Certains de ces points ne sont pas standardisés dans le Ludo classique : ce sont des interprétations raisonnables des règles demandées au fil de nos échanges — n'hésitez pas à demander d'autres ajustements.</i></p>
+      <p style="opacity:0.7;margin-top:10px;"><i>Certaines règles ne sont pas standard dans le Ludo classique : ce sont des choix faits ensemble au fil de nos échanges. Toute demande d'ajustement est la bienvenue.</i></p>
     </div>
     <button class="primary" onclick="closeModal()" style="margin-top:12px;">Fermer</button>
   `);
