@@ -164,6 +164,17 @@
   .pip-die .pip{width:9px;height:9px;border-radius:50%;background:var(--ink);margin:auto;opacity:0;}
   .pip-die .pip.on{opacity:1;}
   .board-wrap{display:flex;flex-direction:column;align-items:center;overflow:visible;}
+  .sticky-turn-bar{
+    position:sticky;top:0;z-index:60;
+    display:flex;align-items:center;justify-content:center;gap:16px;
+    background:rgba(10,34,30,0.94);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    border-bottom:2px solid var(--gold);
+    padding:calc(env(safe-area-inset-top) + 8px) 14px 8px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.35);
+  }
+  .sticky-turn-bar .fs-turn-indicator{ margin:0; }
+  .sticky-turn-bar #rollBtn{ padding:8px 20px; }
+  body.fs-mode .sticky-turn-bar{ display:none !important; }
   .board-zoom-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;}
   .board-zoom-row button{padding:4px 12px;font-size:0.95rem;}
   #board{background:var(--sand);border-radius:16px;border:6px solid var(--wax-line);
@@ -304,6 +315,11 @@
     </div>
   </header>
 
+  <div class="sticky-turn-bar" id="stickyTurnBar" style="display:none;">
+    <div class="fs-turn-indicator" id="stickyTurnIndicator"></div>
+    <button class="primary" id="rollBtn">🎲 Lancer le(s) dé(s)</button>
+  </div>
+
   <div class="layout" id="layoutRoot">
     <div>
       <div class="panel" id="authPanel">
@@ -404,9 +420,8 @@
     <div>
       <div class="panel" id="gamePanel" style="display:none;">
         <div style="display:flex;gap:8px;">
-          <button class="primary" id="rollBtn" style="flex:1;">🎲 Lancer le(s) dé(s)</button>
-          <button class="ghost" id="soundToggle" title="Couper/activer le son des dés">🔊</button>
-          <button class="ghost" id="soundTestBtn" title="Tester le son directement">🔈 Tester</button>
+          <button class="ghost" id="soundToggle" title="Couper/activer le son des dés" style="flex:1;">🔊 Son</button>
+          <button class="ghost" id="soundTestBtn" title="Tester le son directement" style="flex:1;">🔈 Tester</button>
         </div>
         <p class="help-text" id="turnHint"></p>
         <div style="display:flex;gap:8px;margin-top:8px;">
@@ -916,6 +931,7 @@ document.getElementById("startBtn").addEventListener("click", async ()=>{
   const diceMode = parseInt(document.getElementById("diceMode").value,10);
   state = newGame(seats, diceMode);
   document.getElementById("gamePanel").style.display="block";
+  document.getElementById("stickyTurnBar").style.display="flex";
   hideSetupPanels();
   renderAll();
   await createGameRowInSupabase(seats, diceMode);
@@ -965,6 +981,7 @@ function subscribeOnlineChannel(code){
   channel.on("broadcast", {event:"state"}, ({payload})=>{
     state = payload;
     document.getElementById("gamePanel").style.display="block";
+  document.getElementById("stickyTurnBar").style.display="flex";
     hideSetupPanels();
     renderAll();
   });
@@ -1012,6 +1029,7 @@ document.getElementById("leaveRoomBtn").addEventListener("click", ()=>{
   document.getElementById("onlineSetup").style.display="block";
   document.getElementById("onlineRoom").style.display="none";
   document.getElementById("gamePanel").style.display="none";
+  document.getElementById("stickyTurnBar").style.display="none";
 });
 
 function renderSeatClaims(){
@@ -1075,6 +1093,7 @@ document.getElementById("onlineStartBtn").addEventListener("click", async ()=>{
   const diceMode = parseInt(document.getElementById("onlineDiceMode").value,10);
   state = newGame(seats, diceMode);
   document.getElementById("gamePanel").style.display="block";
+  document.getElementById("stickyTurnBar").style.display="flex";
   hideSetupPanels();
   renderAll();
   await createGameRowInSupabase(seats, diceMode);
@@ -1151,6 +1170,7 @@ function showAuthUi(){
   document.getElementById("setupPanel").style.display="none";
   document.getElementById("onlinePanel").style.display="none";
   document.getElementById("gamePanel").style.display="none";
+  document.getElementById("stickyTurnBar").style.display="none";
   setLayoutCentered(true);
 }
 function showPaywall(){
@@ -1160,6 +1180,7 @@ function showPaywall(){
   document.getElementById("setupPanel").style.display="none";
   document.getElementById("onlinePanel").style.display="none";
   document.getElementById("gamePanel").style.display="none";
+  document.getElementById("stickyTurnBar").style.display="none";
   renderPaywallQr();
   setLayoutCentered(true);
   // Filet de sécurité : si l'affichage du paywall venait d'une lecture de profil
@@ -2435,6 +2456,10 @@ function renderTurnBanner(){
   const fsEl = document.getElementById("fsTurnIndicator");
   if(fsEl){
     fsEl.innerHTML = `<span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${COLOR_HEX[c]};vertical-align:middle;margin-right:8px;"></span>Tour de ${COLOR_LABEL[c]}${state.seats[c]==='bot'?' (Ordinateur)':''}`;
+  }
+  const stickyEl = document.getElementById("stickyTurnIndicator");
+  if(stickyEl){
+    stickyEl.innerHTML = `<span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${COLOR_HEX[c]};vertical-align:middle;margin-right:8px;"></span>Tour de ${COLOR_LABEL[c]}${state.seats[c]==='bot'?' (Ordinateur)':''}`;
   }
   document.getElementById("turnHint").textContent =
     online && !isMyTurnOnline() ? "En attente du joueur qui contrôle cette couleur…" :
