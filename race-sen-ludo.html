@@ -163,9 +163,12 @@
   .pip-die.pickable{cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,0.35), 0 0 0 3px #fff;}
   .pip-die .pip{width:9px;height:9px;border-radius:50%;background:var(--ink);margin:auto;opacity:0;}
   .pip-die .pip.on{opacity:1;}
-  .board-wrap{display:flex;flex-direction:column;align-items:center;}
+  .board-wrap{display:flex;flex-direction:column;align-items:center;overflow:visible;}
+  .board-zoom-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;}
+  .board-zoom-row button{padding:4px 12px;font-size:0.95rem;}
   #board{background:var(--sand);border-radius:16px;border:6px solid var(--wax-line);
-    box-shadow:0 12px 30px rgba(0,0,0,0.45);max-width:100%;height:auto;}
+    box-shadow:0 12px 30px rgba(0,0,0,0.45);max-width:100%;height:auto;
+    transition:transform 0.15s ease;transform-origin:top center;}
   .pawn-choice-cell{cursor:pointer;}
   .log{max-height:170px;overflow-y:auto;font-size:0.78rem;line-height:1.5;opacity:0.9;}
   .log div{border-bottom:1px dotted rgba(217,164,65,0.25);padding:2px 0;}
@@ -415,6 +418,11 @@
       <div class="fs-header-row">
         <div class="fs-turn-indicator" id="fsTurnIndicator"></div>
         <button class="ghost fs-exit-btn" id="fsExitBtn">✕ Quitter le plein écran</button>
+      </div>
+      <div class="board-zoom-row">
+        <button class="ghost" id="boardZoomOutBtn" title="Réduire le plateau">➖</button>
+        <span class="help-text" id="boardZoomLabel">100%</span>
+        <button class="ghost" id="boardZoomInBtn" title="Agrandir le plateau">➕</button>
       </div>
       <div class="board-wrap">
         <svg id="board" viewBox="0 0 600 600" width="600" height="600"></svg>
@@ -1199,7 +1207,8 @@ document.getElementById("paywallNotifyBtn").addEventListener("click", async ()=>
   if(!supabaseReady || !currentUser){ statusEl.textContent="Non connecté."; return; }
   try{
     await supabaseClient.from("subscription_requests").insert({
-      user_id: currentUser.id, note: document.getElementById("paywallNote").value.trim()
+      user_id: currentUser.id, email: currentUser.email,
+      note: document.getElementById("paywallNote").value.trim()
     });
     statusEl.textContent="Demande envoyée — l'administrateur activera votre compte sous peu.";
   }catch(e){ statusEl.textContent="Erreur : "+e.message; }
@@ -1637,7 +1646,7 @@ async function renderSubscriptionRequestsList(){
   const box = document.getElementById("subReqList");
   try{
     const { data, error } = await supabaseClient.from("subscription_requests")
-      .select("id,user_id,note,created_at").eq("status","pending").order("created_at",{ascending:true});
+      .select("id,user_id,email,note,created_at").eq("status","pending").order("created_at",{ascending:true});
     if(error) throw error;
     if(!data || !data.length){ box.innerHTML = `<p class="help-text">Aucune demande en attente.</p>`; return; }
     const userIds = [...new Set(data.map(r=>r.user_id))];
@@ -1646,18 +1655,30 @@ async function renderSubscriptionRequestsList(){
     box.innerHTML = data.map(r=>`
       <div style="border:1px solid rgba(217,164,65,0.25);border-radius:8px;padding:8px;margin-bottom:8px;">
         <div><b>${nameOf[r.user_id]||r.user_id}</b> — ${new Date(r.created_at).toLocaleString('fr-FR')}</div>
+        ${r.email ? `<div class="help-text">Email : ${r.email}</div>` : ""}
         ${r.note ? `<div class="help-text">Note : ${r.note}</div>` : ""}
-        <button class="primary" data-reqid="${r.id}" data-userid="${r.user_id}" style="width:100%;margin-top:6px;">✅ Activer 1 an</button>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <input type="number" value="1" min="1" data-durval="${r.id}" style="width:60px;">
+          <select data-durunit="${r.id}" style="flex:1;">
+            <option value="days">Jour(s)</option>
+            <option value="months">Mois</option>
+            <option value="years" selected>Année(s)</option>
+          </select>
+        </div>
+        <button class="primary" data-reqid="${r.id}" data-userid="${r.user_id}" style="width:100%;margin-top:6px;">✅ Activer</button>
       </div>
     `).join("");
     box.querySelectorAll("button[data-reqid]").forEach(btn=>{
       btn.addEventListener("click", async ()=>{
         const reqId = btn.dataset.reqid, userId = btn.dataset.userid;
-        const until = new Date(Date.now() + 365*24*3600*1000).toISOString();
+        const amount = parseInt(box.querySelector(`input[data-durval="${reqId}"]`).value, 10) || 1;
+        const unit = box.querySelector(`select[data-durunit="${reqId}"]`).value;
+        const msPerUnit = { days: 24*3600*1000, months: 30*24*3600*1000, years: 365*24*3600*1000 };
+        const until = new Date(Date.now() + amount*msPerUnit[unit]).toISOString();
         try{
           await supabaseClient.from("profiles").update({subscription_active_until: until}).eq("id", userId);
           await supabaseClient.from("subscription_requests").update({status:"approved", handled_at:new Date().toISOString(), handled_by:currentUser.id}).eq("id", reqId);
-          await logAdminAction("approve_subscription", {userId, until});
+          await logAdminAction("approve_subscription", {userId, amount, unit, until});
           renderSubscriptionRequestsList();
         }catch(e){ alert("Échec de l'activation : "+e.message); }
       });
@@ -1891,6 +1912,23 @@ function setFullscreenMode(active){
   }catch(e){ /* API non disponible : la classe CSS suffit à assurer le mode épuré */ }
 }
 document.getElementById("fsToggleBtn").addEventListener("click", ()=> setFullscreenMode(true));
+
+// Taille du plateau ajustable (agrandir/réduire), de 80% à 160%.
+let boardZoom = 100;
+function applyBoardZoom(){
+  const board = document.getElementById("board");
+  const label = document.getElementById("boardZoomLabel");
+  if(board) board.style.transform = `scale(${boardZoom/100})`;
+  if(label) label.textContent = boardZoom+"%";
+}
+document.getElementById("boardZoomInBtn").addEventListener("click", ()=>{
+  boardZoom = Math.min(160, boardZoom+10);
+  applyBoardZoom();
+});
+document.getElementById("boardZoomOutBtn").addEventListener("click", ()=>{
+  boardZoom = Math.max(80, boardZoom-10);
+  applyBoardZoom();
+});
 document.getElementById("fsExitBtn").addEventListener("click", ()=> setFullscreenMode(false));
 document.addEventListener("fullscreenchange", ()=>{
   if(!document.fullscreenElement) document.body.classList.remove("fs-mode");
