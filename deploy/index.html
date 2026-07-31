@@ -1356,6 +1356,17 @@ async function uploadSponsorImage(file, pathHint){
   return data.publicUrl;
 }
 
+// Upload d'un fichier audio (morceau de playlist) vers le bucket "sponsor-audio".
+async function uploadSponsorAudio(file){
+  if(!supabaseReady || !currentUser) throw new Error("Non connecté / backend indisponible.");
+  const ext = (file.name.split(".").pop()||"mp3").toLowerCase();
+  const path = `track-${Date.now()}.${ext}`;
+  const { error } = await supabaseClient.storage.from("sponsor-audio").upload(path, file, {upsert:true});
+  if(error) throw error;
+  const { data } = supabaseClient.storage.from("sponsor-audio").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 async function logAdminAction(action, details){
   if(!supabaseReady || !currentUser) return;
   try{
@@ -1397,7 +1408,9 @@ function openAdminForm(){
       ${fieldBlock("QR code Wave Business (paiement 1000 XOF/an)", "admWaveQr", "admWaveQrFile", sponsorCfg.waveQrUrl)}
       <p class="help-text" id="admUploadStatus" style="margin-bottom:10px;"></p>
       <label class="help-text" style="display:block;margin-bottom:4px;">Playlist musicale — une ligne par morceau : Titre|URL</label>
-      <textarea id="admPlaylist" rows="4" style="width:100%;margin:0 0 10px;background:#0e2a26;color:var(--sand);border:1px solid rgba(217,164,65,0.4);border-radius:8px;padding:6px;">${playlistText}</textarea>
+      <textarea id="admPlaylist" rows="4" style="width:100%;margin:0 0 6px;background:#0e2a26;color:var(--sand);border:1px solid rgba(217,164,65,0.4);border-radius:8px;padding:6px;">${playlistText}</textarea>
+      <label class="help-text" style="display:block;margin-bottom:3px;opacity:0.75;">— ou uploader un fichier audio (ajoute une ligne automatiquement) :</label>
+      <input type="file" id="admPlaylistFile" accept="audio/*" style="width:100%;margin-bottom:10px;font-size:0.75rem;">
     </div>
     <button class="primary" id="admSave" style="width:100%;">Enregistrer (partagé)</button>
     <button class="ghost" id="admCellImageBtn" style="width:100%;margin-top:8px;">🖼️ Personnaliser une case précise</button>
@@ -1410,6 +1423,23 @@ function openAdminForm(){
   wireImageUploader("admBoardFile", "admBoard", "admUploadStatus", "board-bg");
   wireImageUploader("admCenterFile", "admCenter", "admUploadStatus", "board-center");
   wireImageUploader("admWaveQrFile", "admWaveQr", "admUploadStatus", "wave-qr");
+  document.getElementById("admPlaylistFile").addEventListener("change", async ()=>{
+    const fileInput = document.getElementById("admPlaylistFile");
+    const file = fileInput.files[0];
+    if(!file) return;
+    const statusEl = document.getElementById("admUploadStatus");
+    statusEl.textContent = "Envoi du morceau en cours…";
+    try{
+      const url = await uploadSponsorAudio(file);
+      const title = file.name.replace(/\.[^/.]+$/, "");
+      const textarea = document.getElementById("admPlaylist");
+      textarea.value = (textarea.value.trim() ? textarea.value.trim()+"\n" : "") + `${title}|${url}`;
+      statusEl.textContent = "Morceau envoyé et ajouté à la playlist — pensez à cliquer sur Enregistrer.";
+      fileInput.value = "";
+    }catch(e){
+      statusEl.textContent = "Échec de l'upload : "+e.message;
+    }
+  });
   document.getElementById("admSave").addEventListener("click", async ()=>{
     const playlist = document.getElementById("admPlaylist").value.split("\n")
       .map(l=>l.trim()).filter(Boolean)
@@ -1773,7 +1803,7 @@ document.getElementById("helpBtn").addEventListener("click", ()=>{
       <p>L'accès complet coûte <b>1000 FCFA par an au Sénégal</b> (paiement via QR code Wave Business, activation manuelle par l'admin), ou via un abonnement intégré à <b>2,99 $ par an au Sénégal</b> / <b>4,99 $ par an ailleurs dans le monde</b> sur l'App Store ou Google Play. Après connexion, un compte non abonné voit un écran de paiement adapté ; les admins ne sont jamais soumis à cette limite.</p>
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🛠️ Administration (compte admin uniquement)</p>
-      <p>Habillage sponsor (image générique des cases, fond du plateau, logo central — par URL ou upload direct d'un fichier), <b>image personnalisée pour une case précise</b> parmi les 52 du plateau, <b>image personnalisée pour un bercail précis</b> (une des 4 zones de départ), <b>QR code Wave et gestion des abonnements</b>, playlist musicale (lue par tous les joueurs), et création de tournois sponsorisés mensuels avec <b>sélection des participants parmi les comptes déjà inscrits</b> (le classement n'affiche que les joueurs officiellement choisis par l'admin). Tout l'historique (parties, coups joués, actions admin) est journalisé.</p>
+      <p>Habillage sponsor (image générique des cases, fond du plateau, logo central — par URL ou upload direct d'un fichier), <b>image personnalisée pour une case précise</b> parmi les 52 du plateau, <b>image personnalisée pour un bercail précis</b> (une des 4 zones de départ), <b>QR code Wave et gestion des abonnements</b>, playlist musicale (lue par tous les joueurs, ajoutable par URL ou upload direct de fichiers audio), et création de tournois sponsorisés mensuels avec <b>sélection des participants parmi les comptes déjà inscrits</b> (le classement n'affiche que les joueurs officiellement choisis par l'admin). Tout l'historique (parties, coups joués, actions admin) est journalisé.</p>
 
       <p style="opacity:0.7;margin-top:10px;"><i>Certains de ces points ne sont pas standardisés dans le Ludo classique : ce sont des interprétations raisonnables des règles demandées au fil de nos échanges — n'hésitez pas à demander d'autres ajustements.</i></p>
     </div>
