@@ -168,7 +168,7 @@
   .board-zoom-row button{padding:4px 12px;font-size:0.95rem;}
   #board{background:var(--sand);border-radius:16px;border:6px solid var(--wax-line);
     box-shadow:0 12px 30px rgba(0,0,0,0.45);max-width:100%;height:auto;
-    transition:transform 0.15s ease;transform-origin:top center;}
+    transition:width 0.15s ease;}
   .pawn-choice-cell{cursor:pointer;}
   .log{max-height:170px;overflow-y:auto;font-size:0.78rem;line-height:1.5;opacity:0.9;}
   .log div{border-bottom:1px dotted rgba(217,164,65,0.25);padding:2px 0;}
@@ -1946,7 +1946,10 @@ let boardZoom = 100;
 function applyBoardZoom(){
   const board = document.getElementById("board");
   const label = document.getElementById("boardZoomLabel");
-  if(board) board.style.transform = `scale(${boardZoom/100})`;
+  if(board){
+    board.style.width = Math.round(600*boardZoom/100)+"px";
+    board.style.maxWidth = boardZoom>100 ? "none" : "100%";
+  }
   if(label) label.textContent = boardZoom+"%";
 }
 document.getElementById("boardZoomInBtn").addEventListener("click", ()=>{
