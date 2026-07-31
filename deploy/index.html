@@ -1592,15 +1592,44 @@ async function openSubscriptionAdminForm(){
   showModal(`
     <h3>💳 Gestion des abonnements</h3>
     <div style="text-align:left;">
-      <p class="help-text">Pour activer un compte sans passer par une demande, utilise le SQL Editor Supabase :</p>
-      <div style="background:#0e2a26;border:1px solid rgba(217,164,65,0.4);border-radius:8px;padding:8px;font-size:0.72rem;font-family:monospace;white-space:pre-wrap;margin-bottom:14px;">update public.profiles set subscription_active_until = now() + interval '1 year'
-where id = (select id from auth.users where email = 'EMAIL_DU_COMPTE');</div>
-      <h4 style="color:var(--gold);margin:10px 0 6px;">Demandes en attente</h4>
+      <label class="help-text" style="display:block;margin-bottom:4px;">Activer un compte par email</label>
+      <input type="email" id="subEmail" placeholder="joueur@exemple.com" style="width:100%;margin-bottom:8px;">
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="number" id="subDuration" value="1" min="1" style="width:80px;">
+        <select id="subUnit" style="flex:1;">
+          <option value="days">Jour(s)</option>
+          <option value="months">Mois</option>
+          <option value="years" selected>Année(s)</option>
+        </select>
+      </div>
+      <button class="primary" id="subActivateBtn" style="width:100%;">✅ Activer cet abonnement</button>
+      <p class="help-text" id="subActivateStatus" style="margin-top:6px;"></p>
+      <h4 style="color:var(--gold);margin:14px 0 6px;">Demandes en attente</h4>
       <div id="subReqList" style="max-height:260px;overflow-y:auto;"><p class="help-text">Chargement…</p></div>
     </div>
     <button class="ghost" id="subBack" style="width:100%;margin-top:10px;">Retour</button>
   `);
   document.getElementById("subBack").addEventListener("click", openAdminForm);
+  document.getElementById("subActivateBtn").addEventListener("click", async ()=>{
+    const email = document.getElementById("subEmail").value.trim();
+    const amount = parseInt(document.getElementById("subDuration").value, 10);
+    const unit = document.getElementById("subUnit").value;
+    const statusEl = document.getElementById("subActivateStatus");
+    if(!email || !amount || amount<1){ statusEl.textContent="Entrez un email et une durée valides."; return; }
+    statusEl.textContent = "Recherche du compte…";
+    try{
+      const { data: userId, error: e1 } = await supabaseClient.rpc("find_user_id_by_email", {target_email: email});
+      if(e1) throw e1;
+      if(!userId){ statusEl.textContent="Aucun compte trouvé avec cet email."; return; }
+      const msPerUnit = { days: 24*3600*1000, months: 30*24*3600*1000, years: 365*24*3600*1000 };
+      const until = new Date(Date.now() + amount*msPerUnit[unit]).toISOString();
+      const { error: e2 } = await supabaseClient.from("profiles").update({subscription_active_until: until}).eq("id", userId);
+      if(e2) throw e2;
+      await logAdminAction("activate_subscription_by_email", {email, amount, unit, until});
+      const unitLabel = {days:"jour(s)", months:"mois", years:"année(s)"}[unit];
+      statusEl.textContent = `Abonnement activé pour ${email} — ${amount} ${unitLabel} à partir de maintenant.`;
+    }catch(e){ statusEl.textContent = "Erreur : "+e.message; }
+  });
   await renderSubscriptionRequestsList();
 }
 
@@ -1805,7 +1834,7 @@ document.getElementById("helpBtn").addEventListener("click", ()=>{
       <p>1000 FCFA/an au Sénégal (paiement par QR code Wave), ou via l'App Store / Google Play : 2,99 $/an au Sénégal, 4,99 $/an ailleurs.</p>
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🛠️ Pour les administrateurs</p>
-      <p>Personnalisation du plateau (cases, bercails, plateau entier, logo), playlist musicale, gestion des demandes d'abonnement, et création de tournois avec sélection des participants parmi les comptes inscrits.</p>
+      <p>Personnalisation du plateau (cases, bercails, plateau entier, logo), playlist musicale, gestion des demandes d'abonnement (approbation en un clic ou <b>activation directe par email avec une durée personnalisée</b> — jours, mois ou années), et création de tournois avec sélection des participants parmi les comptes inscrits.</p>
 
       <p style="opacity:0.7;margin-top:10px;"><i>Certaines règles ne sont pas standard dans le Ludo classique : ce sont des choix faits ensemble au fil de nos échanges. Toute demande d'ajustement est la bienvenue.</i></p>
     </div>
