@@ -722,6 +722,34 @@ function anyValidMove(){
 function uniqueDice(){ return [...new Set(state.dice)]; }
 
 // ---- Applying a move ----
+// Anime un pion case par case avant que le coup ne soit réellement appliqué,
+// pour qu'il ne semble jamais "sauter" par-dessus des cases intermédiaires.
+// Purement visuel : l'état réel n'est modifié qu'après l'animation, via onDone().
+function animatePawnHop(p, moveType, newProgress, onDone){
+  if(moveType!=="advance" || p.state!=="path" || newProgress===undefined){ onDone(); return; }
+  const steps = [];
+  const commonEnd = Math.min(newProgress, 51);
+  for(let pr = p.progress+1; pr <= commonEnd; pr++) steps.push({state:"path", progress:pr});
+  if(newProgress>51){
+    for(let d=1; d<=newProgress-51; d++) steps.push({state:"homecol", progress:d});
+  }
+  if(!steps.length){ onDone(); return; }
+  const originalProgress = p.progress, originalState = p.state;
+  let i=0;
+  const hop = ()=>{
+    if(i>=steps.length){
+      p.progress = originalProgress; p.state = originalState;
+      onDone();
+      return;
+    }
+    p.state = steps[i].state; p.progress = steps[i].progress;
+    renderBoard();
+    i++;
+    setTimeout(hop, 110);
+  };
+  hop();
+}
+
 function applyMove(p, die, move){
   const color = p.color;
   if(move.type==="enter"){
@@ -2362,18 +2390,20 @@ function botAutoPlay(){
   const capturing = candidates.filter(c => moveWouldCapture(c.p, c.move));
   const chosen = capturing.length>0 ? capturing[0] : candidates[0];
   removeOneDie(chosen.die);
-  applyMove(chosen.p, chosen.die, chosen.move);
-  renderAll();
-  broadcastState();
-  setTimeout(()=>{
-    if(state.dice.length>0 && !anyValidMove()){
-      finishDiceUsage(grantsBonus(state.diceHistory));
-    } else if(state.dice.length>0){
-      botAutoPlay();
-    } else {
-      finishDiceUsage(grantsBonus(state.diceHistory));
-    }
-  }, 500);
+  animatePawnHop(chosen.p, chosen.move.type, chosen.move.newProgress, ()=>{
+    applyMove(chosen.p, chosen.die, chosen.move);
+    renderAll();
+    broadcastState();
+    setTimeout(()=>{
+      if(state.dice.length>0 && !anyValidMove()){
+        finishDiceUsage(grantsBonus(state.diceHistory));
+      } else if(state.dice.length>0){
+        botAutoPlay();
+      } else {
+        finishDiceUsage(grantsBonus(state.diceHistory));
+      }
+    }, 500);
+  });
 }
 
 function removeOneDie(val){
@@ -2874,10 +2904,12 @@ function onPawnClicked(p){
   const proceed = (move)=>{
     state.dice.splice(dieIdx,1);
     selectedDie=null;
-    applyMove(p, die, move);
-    renderAll();
-    broadcastState();
-    postMoveFlow();
+    animatePawnHop(p, move.type, move.newProgress, ()=>{
+      applyMove(p, die, move);
+      renderAll();
+      broadcastState();
+      postMoveFlow();
+    });
   };
   if(moves.length===1){
     proceed(moves[0]);
