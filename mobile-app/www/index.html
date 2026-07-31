@@ -61,7 +61,7 @@
   header.top h1{font-size:1.55rem;color:var(--sand);letter-spacing:1px;}
   header.top .tag{font-size:0.78rem;opacity:0.75;letter-spacing:1.5px;text-transform:uppercase;}
   .layout{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:22px;}
-  .layout.layout-centered{grid-template-columns:minmax(280px,480px);justify-content:center;}
+  .layout.layout-centered{grid-template-columns:minmax(280px,660px);justify-content:center;}
   .active-yard-glow{ animation: yardPulse 1.4s ease-in-out infinite; }
   @keyframes yardPulse{
     0%{ opacity:0.4; stroke-width:4; }
@@ -785,7 +785,7 @@ function hideSetupPanels(){
     const el = document.getElementById(id);
     if(el) el.style.display="none";
   });
-  setLayoutCentered(false);
+  setLayoutCentered(true);
 }
 
 // Centre le contenu sur la page tant qu'aucune partie n'est réellement lancée
