@@ -2433,26 +2433,33 @@ function prisonYardPos(captorColor, idx){
 function buildPawnShape(cx, cy, color, radius, eligible, isCaptured){
   const g = el("g",{});
   if(eligible) g.classList.add("pawn-choice-cell");
-  const bodyCy = cy + radius*0.15;
+  const bodyCy = cy + radius*0.22;
   // ombre portée
-  g.appendChild(el("ellipse",{cx, cy:bodyCy+radius*0.9, rx:radius*0.95, ry:radius*0.3, fill:"rgba(0,0,0,0.28)"}));
+  g.appendChild(el("ellipse",{cx, cy:bodyCy+radius*1.05, rx:radius*0.98, ry:radius*0.3, fill:"rgba(0,0,0,0.28)"}));
   // corps (base élargie, façon pion de jeu)
   const body = el("ellipse",{
-    cx, cy:bodyCy+radius*0.22, rx:radius*0.92, ry:radius*0.66, fill:COLOR_HEX[color],
+    cx, cy:bodyCy+radius*0.32, rx:radius*0.95, ry:radius*0.66, fill:COLOR_HEX[color],
     stroke: eligible?"#fff":"#231705", "stroke-width": eligible?3:1.4,
     "stroke-dasharray": isCaptured? "3,2.5" : "none"
   });
   g.appendChild(body);
+  // taille (3e étage, sphère intermédiaire entre le corps et la tête)
+  const waist = el("circle",{
+    cx, cy:bodyCy-radius*0.28, r:radius*0.5, fill:COLOR_HEX[color],
+    stroke: eligible?"#fff":"#231705", "stroke-width": eligible?2.4:1.2,
+    "stroke-dasharray": isCaptured? "2,2" : "none"
+  });
+  g.appendChild(waist);
   // tête (sphère supérieure)
   const head = el("circle",{
-    cx, cy:bodyCy-radius*0.5, r:radius*0.56, fill:COLOR_HEX[color],
-    stroke: eligible?"#fff":"#231705", "stroke-width": eligible?2.2:1.1,
+    cx, cy:bodyCy-radius*0.92, r:radius*0.4, fill:COLOR_HEX[color],
+    stroke: eligible?"#fff":"#231705", "stroke-width": eligible?2:1,
     "stroke-dasharray": isCaptured? "2,2" : "none"
   });
   g.appendChild(head);
   if(isCaptured){
     g.setAttribute("opacity","0.85");
-    const lock = el("text",{x:cx, y:bodyCy-radius*0.25, "text-anchor":"middle","font-size":Math.max(9,radius*0.85)});
+    const lock = el("text",{x:cx, y:bodyCy-radius*0.6, "text-anchor":"middle","font-size":Math.max(9,radius*0.75)});
     lock.textContent="🔒";
     g.appendChild(lock);
   }
@@ -2476,7 +2483,7 @@ function drawPawns(svg){
       const cy = base.y + CELL/2 + jitter[1];
       const eligible = isEligiblePawn(p);
       const isCaptured = p.state==="captured";
-      const radius = isCaptured ? 13 : (group.length>1 ? 15 : 20);
+      const radius = isCaptured ? 14 : (group.length>1 ? 16 : 22);
       const g = buildPawnShape(cx, cy, p.color, radius, eligible, isCaptured);
       svg.appendChild(g);
       if(eligible){
