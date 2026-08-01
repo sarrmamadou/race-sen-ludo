@@ -694,16 +694,29 @@ function possibleMovesForPawn(p, die){
       }
     }
 
-    // Option B: invasion — if sitting exactly on another color's turn-junction cell
+    // Option B: invasion — n'importe quel pion peut envahir une maison adverse
+    // si le dé lui permet d'atteindre la jonction de cette couleur ET de
+    // continuer dedans (pas besoin d'être déjà exactement sur la jonction).
     COLORS.forEach(other=>{
       if(other===p.color) return;
-      if(curIdx===TURN_INDEX[other] && die<=5){
+      const stepsToJunction = (TURN_INDEX[other] - curIdx + 52) % 52;
+      const depth = die - stepsToJunction;
+      if(stepsToJunction < die && depth>=1 && depth<=5){
+        // vérifie qu'aucun barrage ne bloque le trajet commun jusqu'à la jonction
         let blocked=false;
-        for(let d=1; d<=die; d++){
-          const st = stackInfo("homecol:"+other+":"+d);
+        for(let s=1; s<=stepsToJunction; s++){
+          const idx = (curIdx + s) % 52;
+          const st = stackInfo("path:"+idx);
           if(st && st.color!==p.color && st.count>=2 && state.sixStreak < st.count){ blocked=true; break; }
         }
-        if(!blocked) moves.push({type:"invadeEnter", of:other, depth:die});
+        // puis qu'aucun barrage ne bloque à l'intérieur du couloir envahi jusqu'à la profondeur voulue
+        if(!blocked){
+          for(let d=1; d<=depth; d++){
+            const st2 = stackInfo("homecol:"+other+":"+d);
+            if(st2 && st2.color!==p.color && st2.count>=2 && state.sixStreak < st2.count){ blocked=true; break; }
+          }
+        }
+        if(!blocked) moves.push({type:"invadeEnter", of:other, depth});
       }
     });
 
@@ -1876,7 +1889,7 @@ document.getElementById("helpBtn").addEventListener("click", ()=>{
       <p>2 pions ou plus de la même couleur peuvent se poser sur la même case pour former un barrage. Un adversaire ne peut ni le traverser ni s'y arrêter, sauf s'il a obtenu, ce tour-ci, <b>autant de six qu'il y a de pions empilés</b>.</p>
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🏠 Envahir la maison d'un adversaire</p>
-      <p>Juste avant l'entrée du couloir final d'une couleur, tout le monde peut passer. Un pion adverse arrêté là peut choisir d'<b>y entrer</b> pour capturer un pion isolé à l'intérieur. Il ne peut pas y finir sa course : pour en ressortir, il recule case par case, et <b>chaque recul coûte un six</b>. En reculant, il capture aussi tout pion isolé rencontré sur son chemin.</p>
+      <p><b>N'importe quel pion, où qu'il soit sur le plateau, peut envahir</b> le couloir final d'une couleur adverse — pas besoin d'être déjà juste devant. Il suffit que la valeur du dé soit suffisante pour l'y amener et continuer dedans (ex : à 3 cases de la jonction avec un 5, il entre 2 cases dans le couloir). Il ne peut pas y finir sa course : pour en ressortir, il recule case par case, et <b>chaque recul coûte un six</b>. En reculant, il capture aussi tout pion isolé rencontré sur son chemin.</p>
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">✂️ Capturer un pion</p>
       <p>Un pion seul (pas de barrage) peut être capturé n'importe où sur le plateau. <b>Exception</b> : sur une case de départ, il faut un six pour capturer. Une case personnalisée par le sponsor est toujours protégée.</p>
