@@ -1319,10 +1319,63 @@ async function purchaseNativeSubscription(){
   }
 }
 
+// ---- Limite de 2 appareils par compte -----------------------------------
+function getDeviceId(){
+  let id = localStorage.getItem("race_device_id");
+  if(!id){
+    id = (crypto.randomUUID ? crypto.randomUUID() : ("dev-"+Date.now()+"-"+Math.random().toString(36).slice(2)));
+    localStorage.setItem("race_device_id", id);
+  }
+  return id;
+}
+function getDeviceLabel(){
+  const ua = navigator.userAgent || "";
+  if(window.Capacitor && window.Capacitor.getPlatform){
+    const platform = window.Capacitor.getPlatform();
+    if(platform==="ios") return /iPad/.test(ua) ? "iPad (app)" : "iPhone (app)";
+    if(platform==="android") return "Android (app)";
+  }
+  if(/iPhone/.test(ua)) return "iPhone (web)";
+  if(/iPad/.test(ua)) return "iPad (web)";
+  if(/Android/.test(ua)) return "Android (web)";
+  if(/Macintosh/.test(ua)) return "Mac (web)";
+  if(/Windows/.test(ua)) return "Windows (web)";
+  return "Navigateur";
+}
+async function enforceDeviceLimit(userId){
+  const deviceId = getDeviceId();
+  try{
+    const { data: devices, error } = await supabaseClient.from("user_devices").select("device_id").eq("user_id", userId);
+    if(error) throw error;
+    const known = (devices||[]).some(d=>d.device_id===deviceId);
+    if(known){
+      await supabaseClient.from("user_devices").update({last_seen:new Date().toISOString()}).eq("user_id",userId).eq("device_id",deviceId);
+      return { ok:true };
+    }
+    if((devices||[]).length >= 2){
+      return { ok:false, message:"Limite de 2 appareils atteinte pour ce compte. Déconnectez-vous d'un autre appareil, ou contactez l'administrateur pour en libérer un." };
+    }
+    await supabaseClient.from("user_devices").insert({ user_id:userId, device_id:deviceId, device_label:getDeviceLabel() });
+    return { ok:true };
+  }catch(e){
+    console.warn("Vérification des appareils impossible :", e);
+    return { ok:true }; // en cas d'erreur réseau/RLS, on ne bloque pas l'accès
+  }
+}
+
 async function handleAuthedSession(user){
   currentUser = { id:user.id, email:user.email };
   isGuest = false;
   currentProfile = await fetchOrCreateProfile(user.id);
+  if(currentProfile && currentProfile.role!=="admin"){
+    const deviceCheck = await enforceDeviceLimit(user.id);
+    if(!deviceCheck.ok){
+      setAuthStatus(deviceCheck.message);
+      await supabaseClient.auth.signOut();
+      currentUser = null; currentProfile = null;
+      return;
+    }
+  }
   refreshUserBar();
   await initNativePurchases(user.id);
   if(isSubscriptionActive(currentProfile)){
@@ -1806,6 +1859,10 @@ async function openSubscriptionAdminForm(){
       <p class="help-text" id="subActivateStatus" style="margin-top:6px;"></p>
       <h4 style="color:var(--gold);margin:14px 0 6px;">Demandes en attente</h4>
       <div id="subReqList" style="max-height:260px;overflow-y:auto;"><p class="help-text">Chargement…</p></div>
+      <h4 style="color:var(--gold);margin:14px 0 6px;">📱 Appareils enregistrés (limite : 2 / compte)</h4>
+      <input type="email" id="devEmail" placeholder="joueur@exemple.com" style="width:100%;margin-bottom:8px;">
+      <button class="ghost" id="devLookupBtn" style="width:100%;margin-bottom:8px;">Rechercher les appareils</button>
+      <div id="devList"></div>
     </div>
     <button class="ghost" id="subBack" style="width:100%;margin-top:10px;">Retour</button>
   `);
@@ -1829,6 +1886,32 @@ async function openSubscriptionAdminForm(){
       const unitLabel = {days:"jour(s)", months:"mois", years:"année(s)"}[unit];
       statusEl.textContent = `Abonnement activé pour ${email} — ${amount} ${unitLabel} à partir de maintenant.`;
     }catch(e){ statusEl.textContent = "Erreur : "+e.message; }
+  });
+  document.getElementById("devLookupBtn").addEventListener("click", async ()=>{
+    const email = document.getElementById("devEmail").value.trim();
+    const listEl = document.getElementById("devList");
+    if(!email){ listEl.innerHTML = `<p class="help-text">Entrez un email.</p>`; return; }
+    listEl.innerHTML = `<p class="help-text">Recherche…</p>`;
+    try{
+      const { data: userId, error: e1 } = await supabaseClient.rpc("find_user_id_by_email", {target_email: email});
+      if(e1) throw e1;
+      if(!userId){ listEl.innerHTML = `<p class="help-text">Aucun compte trouvé avec cet email.</p>`; return; }
+      const { data: devices, error: e2 } = await supabaseClient.from("user_devices").select("device_id,device_label,first_seen,last_seen").eq("user_id", userId).order("last_seen",{ascending:false});
+      if(e2) throw e2;
+      if(!devices || !devices.length){ listEl.innerHTML = `<p class="help-text">Aucun appareil enregistré pour ce compte.</p>`; return; }
+      listEl.innerHTML = devices.map(d=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(217,164,65,0.2);">
+          <span class="help-text">${d.device_label||"Appareil inconnu"}<br><span style="opacity:0.6;font-size:0.7rem;">Dernière connexion : ${new Date(d.last_seen).toLocaleString("fr-FR")}</span></span>
+          <button class="ghost devRemoveBtn" data-user="${userId}" data-device="${d.device_id}" style="padding:4px 10px;font-size:0.75rem;">Retirer</button>
+        </div>`).join("");
+      listEl.querySelectorAll(".devRemoveBtn").forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+          await supabaseClient.from("user_devices").delete().eq("user_id",btn.dataset.user).eq("device_id",btn.dataset.device);
+          await logAdminAction("remove_user_device", {user_id:btn.dataset.user, device_id:btn.dataset.device});
+          document.getElementById("devLookupBtn").click();
+        });
+      });
+    }catch(e){ listEl.innerHTML = `<p class="help-text">Erreur : ${e.message}</p>`; }
   });
   await renderSubscriptionRequestsList();
 }
@@ -2911,7 +2994,9 @@ function drawPawns(svg){
       const cy = base.y + CELL/2 + jitter[1];
       const eligible = isEligiblePawn(p);
       const isCaptured = p.state==="captured";
-      const radius = isCaptured ? 8.5 : (group.length>1 ? 10 : 13);
+      const isInYard = p.state==="yard";
+      let radius = isCaptured ? 8.5 : (group.length>1 ? 10 : 13);
+      if(isInYard) radius *= 3;
       const g = buildPawnShape(cx, cy, p.color, radius, eligible, isCaptured);
       svg.appendChild(g);
       if(eligible){
