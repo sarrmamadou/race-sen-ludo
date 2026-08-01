@@ -520,7 +520,7 @@ function progressFromGlobal(color, idx){ // inverse
 
 // ---- Game state ----
 let state = null;
-let sponsorCfg = { cellImg:"", boardImg:"", centerImg:"", playlist:[], cellImages:{}, yardImages:{}, waveQrUrl:"" };
+let sponsorCfg = { cellImg:"", boardImg:"", centerImg:"", playlist:[], cellImages:{}, yardImages:{}, waveQrUrl:"", paymentOrangeMoney:"", paymentWaveNumber:"", paymentDjamo:"", paymentBankInfo:"" };
 
 function freshPawn(color, id){
   return { color, id, state:"yard", progress:0, invade:null, capturedBy:null };
@@ -1222,9 +1222,20 @@ function showPaywall(){
 function renderPaywallQr(){
   const wrap = document.getElementById("paywallQrWrap");
   if(!wrap) return;
-  wrap.innerHTML = sponsorCfg.waveQrUrl
+  const qr = sponsorCfg.waveQrUrl
     ? `<img src="${sponsorCfg.waveQrUrl}" alt="QR Wave" style="max-width:220px;border-radius:10px;border:2px solid var(--gold);">`
     : `<p class="help-text">QR code de paiement pas encore configuré par l'administrateur.</p>`;
+  const rows = [];
+  if(sponsorCfg.paymentOrangeMoney) rows.push(["🟠 Orange Money", sponsorCfg.paymentOrangeMoney]);
+  if(sponsorCfg.paymentWaveNumber) rows.push(["🔵 Wave (transfert direct)", sponsorCfg.paymentWaveNumber]);
+  if(sponsorCfg.paymentDjamo) rows.push(["🟣 Djamo", sponsorCfg.paymentDjamo]);
+  if(sponsorCfg.paymentBankInfo) rows.push(["🏦 Virement bancaire", sponsorCfg.paymentBankInfo]);
+  const otherMethods = rows.length ? `
+    <div style="text-align:left;margin-top:12px;border-top:1px dashed rgba(217,164,65,0.3);padding-top:10px;">
+      <p class="help-text" style="margin-bottom:6px;"><b>Autres moyens de paiement :</b></p>
+      ${rows.map(([label,val])=>`<p class="help-text" style="margin:2px 0;">${label} : <b style="color:var(--sand);">${val}</b></p>`).join("")}
+    </div>` : "";
+  wrap.innerHTML = qr + otherMethods;
 }
 function isSubscriptionActive(profile){
   if(!profile) return false;
@@ -1443,9 +1454,10 @@ async function loadSponsorConfig(){
   const statusEl = document.getElementById("sponsorStatusText");
   if(!supabaseReady){ if(statusEl) statusEl.textContent="Backend Supabase non configuré (aucun habillage appliqué)."; return; }
   try{
-    const { data, error } = await supabaseClient.from("sponsor_config").select("cell_img,board_img,center_img,playlist,cell_images,yard_images,wave_qr_url").eq("id",1).single();
+    const { data, error } = await supabaseClient.from("sponsor_config").select("cell_img,board_img,center_img,playlist,cell_images,yard_images,wave_qr_url,payment_orange_money,payment_wave_number,payment_djamo,payment_bank_info").eq("id",1).single();
     if(error || !data){ if(statusEl) statusEl.textContent="Aucune configuration sponsor définie pour l'instant."; return; }
-    sponsorCfg = { cellImg:data.cell_img||"", boardImg:data.board_img||"", centerImg:data.center_img||"", playlist:data.playlist||[], cellImages:data.cell_images||{}, yardImages:data.yard_images||{}, waveQrUrl:data.wave_qr_url||"" };
+    sponsorCfg = { cellImg:data.cell_img||"", boardImg:data.board_img||"", centerImg:data.center_img||"", playlist:data.playlist||[], cellImages:data.cell_images||{}, yardImages:data.yard_images||{}, waveQrUrl:data.wave_qr_url||"",
+      paymentOrangeMoney:data.payment_orange_money||"", paymentWaveNumber:data.payment_wave_number||"", paymentDjamo:data.payment_djamo||"", paymentBankInfo:data.payment_bank_info||"" };
     if(statusEl) statusEl.textContent="Configuration sponsor chargée.";
   }catch(e){ if(statusEl) statusEl.textContent="Aucune configuration sponsor définie pour l'instant."; }
   renderBoard();
@@ -1461,6 +1473,8 @@ async function saveSponsorConfig(cfg){
       const { error } = await supabaseClient.from("sponsor_config").upsert({
         id:1, cell_img:cfg.cellImg, board_img:cfg.boardImg, center_img:cfg.centerImg, playlist:cfg.playlist||[],
         cell_images:cfg.cellImages||{}, yard_images:cfg.yardImages||{}, wave_qr_url:cfg.waveQrUrl||"",
+        payment_orange_money:cfg.paymentOrangeMoney||"", payment_wave_number:cfg.paymentWaveNumber||"",
+        payment_djamo:cfg.paymentDjamo||"", payment_bank_info:cfg.paymentBankInfo||"",
         updated_by: currentUser.id, updated_at: new Date().toISOString()
       });
       if(error) throw error;
@@ -1555,6 +1569,14 @@ function openAdminForm(){
       ${fieldBlock("Fond du plateau", "admBoard", "admBoardFile", sponsorCfg.boardImg)}
       ${fieldBlock("Logo central", "admCenter", "admCenterFile", sponsorCfg.centerImg)}
       ${fieldBlock("QR code Wave Business (paiement 1000 XOF/an)", "admWaveQr", "admWaveQrFile", sponsorCfg.waveQrUrl)}
+      <label class="help-text" style="display:block;margin-bottom:4px;">Numéro Orange Money</label>
+      <input type="text" id="admOrangeMoney" placeholder="Ex: 77 123 45 67" value="${sponsorCfg.paymentOrangeMoney||''}" style="margin-bottom:10px;">
+      <label class="help-text" style="display:block;margin-bottom:4px;">Numéro Wave (transfert direct)</label>
+      <input type="text" id="admWaveNumber" placeholder="Ex: 70 123 45 67" value="${sponsorCfg.paymentWaveNumber||''}" style="margin-bottom:10px;">
+      <label class="help-text" style="display:block;margin-bottom:4px;">Numéro Djamo</label>
+      <input type="text" id="admDjamo" placeholder="Ex: 76 123 45 67" value="${sponsorCfg.paymentDjamo||''}" style="margin-bottom:10px;">
+      <label class="help-text" style="display:block;margin-bottom:4px;">Virement bancaire (IBAN/RIB)</label>
+      <textarea id="admBankInfo" rows="2" placeholder="Ex: Banque X — RIB SN00 0000 0000 0000 0000 0000 0" style="width:100%;margin:0 0 10px;background:#0e2a26;color:var(--sand);border:1px solid rgba(217,164,65,0.4);border-radius:8px;padding:6px;">${sponsorCfg.paymentBankInfo||''}</textarea>
       <p class="help-text" id="admUploadStatus" style="margin-bottom:10px;"></p>
       <label class="help-text" style="display:block;margin-bottom:4px;">Playlist musicale — une ligne par morceau : Titre|URL</label>
       <textarea id="admPlaylist" rows="4" style="width:100%;margin:0 0 6px;background:#0e2a26;color:var(--sand);border:1px solid rgba(217,164,65,0.4);border-radius:8px;padding:6px;">${playlistText}</textarea>
@@ -1598,6 +1620,10 @@ function openAdminForm(){
       boardImg: document.getElementById("admBoard").value.trim(),
       centerImg: document.getElementById("admCenter").value.trim(),
       waveQrUrl: document.getElementById("admWaveQr").value.trim(),
+      paymentOrangeMoney: document.getElementById("admOrangeMoney").value.trim(),
+      paymentWaveNumber: document.getElementById("admWaveNumber").value.trim(),
+      paymentDjamo: document.getElementById("admDjamo").value.trim(),
+      paymentBankInfo: document.getElementById("admBankInfo").value.trim(),
       playlist
     });
     await saveSponsorConfig(cfg);
