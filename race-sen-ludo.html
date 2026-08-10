@@ -339,9 +339,10 @@
       <div class="panel" id="paywallPanel" style="display:none;">
         <h3>💳 Abonnement RACE-SEN-LUDO</h3>
         <div id="paywallNativeSection" style="display:none;">
-          <p class="help-text">Débloquez l'accès complet avec un abonnement annuel.</p>
+          <p class="help-text">Débloquez l'accès complet avec un abonnement annuel. Renouvellement automatique, résiliable à tout moment dans les réglages de ton compte.</p>
           <button class="primary" id="paywallNativeBtn" style="width:100%;margin-bottom:8px;">🛒 S'abonner (1 an)</button>
           <button class="ghost" id="paywallRecheckBtnNative" style="width:100%;margin-bottom:8px;">🔄 Restaurer mon abonnement</button>
+          <p class="help-text" style="opacity:0.75;font-size:0.8rem;">En t'abonnant, tu acceptes nos <a href="https://ludo.sn/conditions" target="_blank" style="color:var(--gold);">Conditions d'utilisation</a> et notre <a href="https://ludo.sn/confidentialite" target="_blank" style="color:var(--gold);">Politique de confidentialité</a>.</p>
         </div>
         <div id="paywallWebSection">
           <p class="help-text">L'accès complet coûte <b>1000 FCFA / an</b> (Sénégal).</p>
@@ -458,7 +459,7 @@
   </div>
   <div class="fs-turn-indicator" id="turnBanner" style="display:none;"></div>
 
-  <div class="footer-note">RACE-SEN-LUDO — jouez sur ludo.sn ou race-senegal.sn — historique des parties, habillage sponsor et tournois.<br>© 2026 R.A.C.E - Tous droits réservés</div>
+  <div class="footer-note">RACE-SEN-LUDO — jouez sur ludo.sn ou race-senegal.sn — historique des parties, habillage sponsor et tournois.<br>© 2026 R.A.C.E - Tous droits réservés<br><a href="https://ludo.sn/conditions" target="_blank" style="color:inherit;text-decoration:underline;">Conditions d'utilisation</a> · <a href="https://ludo.sn/confidentialite" target="_blank" style="color:inherit;text-decoration:underline;">Confidentialité</a> · <a href="https://ludo.sn/support" target="_blank" style="color:inherit;text-decoration:underline;">Support</a></div>
 </div>
 
 <div id="modalRoot"></div>
@@ -1249,7 +1250,7 @@ function isSubscriptionActive(profile){
 async function fetchOrCreateProfile(userId, isRetry){
   if(!supabaseReady) return {role:"player"};
   try{
-    let { data, error } = await supabaseClient.from("profiles").select("role,subscription_active_until").eq("id", userId).single();
+    let { data, error } = await supabaseClient.from("profiles").select("role,subscription_active_until,max_devices").eq("id", userId).single();
     if(data) return data; // lecture réussie : on ne touche à rien, on renvoie le vrai rôle tel quel
     if(error && error.code==="PGRST116"){
       // "PGRST116" = aucune ligne trouvée : le profil n'existe vraiment pas encore, on le crée
@@ -1319,7 +1320,7 @@ async function purchaseNativeSubscription(){
   }
 }
 
-// ---- Limite de 2 appareils par compte -----------------------------------
+// ---- Limite d'appareils par compte (configurable par l'admin, 2 par défaut) ----
 function getDeviceId(){
   let id = localStorage.getItem("race_device_id");
   if(!id){
@@ -1342,7 +1343,8 @@ function getDeviceLabel(){
   if(/Windows/.test(ua)) return "Windows (web)";
   return "Navigateur";
 }
-async function enforceDeviceLimit(userId){
+async function enforceDeviceLimit(userId, maxDevices){
+  const limit = Number(maxDevices) > 0 ? Number(maxDevices) : 2;
   const deviceId = getDeviceId();
   try{
     const { data: devices, error } = await supabaseClient.from("user_devices").select("device_id").eq("user_id", userId);
@@ -1352,8 +1354,8 @@ async function enforceDeviceLimit(userId){
       await supabaseClient.from("user_devices").update({last_seen:new Date().toISOString()}).eq("user_id",userId).eq("device_id",deviceId);
       return { ok:true };
     }
-    if((devices||[]).length >= 2){
-      return { ok:false, message:"Limite de 2 appareils atteinte pour ce compte. Déconnectez-vous d'un autre appareil, ou contactez l'administrateur pour en libérer un." };
+    if((devices||[]).length >= limit){
+      return { ok:false, message:`Limite de ${limit} appareil(s) atteinte pour ce compte. Déconnectez-vous d'un autre appareil, ou contactez l'administrateur pour en libérer un ou augmenter la limite.` };
     }
     await supabaseClient.from("user_devices").insert({ user_id:userId, device_id:deviceId, device_label:getDeviceLabel() });
     return { ok:true };
@@ -1368,7 +1370,7 @@ async function handleAuthedSession(user){
   isGuest = false;
   currentProfile = await fetchOrCreateProfile(user.id);
   if(currentProfile && currentProfile.role!=="admin"){
-    const deviceCheck = await enforceDeviceLimit(user.id);
+    const deviceCheck = await enforceDeviceLimit(user.id, currentProfile.max_devices);
     if(!deviceCheck.ok){
       setAuthStatus(deviceCheck.message);
       await supabaseClient.auth.signOut();
@@ -1859,10 +1861,18 @@ async function openSubscriptionAdminForm(){
       <p class="help-text" id="subActivateStatus" style="margin-top:6px;"></p>
       <h4 style="color:var(--gold);margin:14px 0 6px;">Demandes en attente</h4>
       <div id="subReqList" style="max-height:260px;overflow-y:auto;"><p class="help-text">Chargement…</p></div>
-      <h4 style="color:var(--gold);margin:14px 0 6px;">📱 Appareils enregistrés (limite : 2 / compte)</h4>
+      <h4 style="color:var(--gold);margin:14px 0 6px;">📱 Appareils enregistrés (limite par défaut : 2 / compte)</h4>
       <input type="email" id="devEmail" placeholder="joueur@exemple.com" style="width:100%;margin-bottom:8px;">
       <button class="ghost" id="devLookupBtn" style="width:100%;margin-bottom:8px;">Rechercher les appareils</button>
       <div id="devList"></div>
+      <div id="devMaxWrap" style="display:none;margin-top:10px;border-top:1px dashed rgba(217,164,65,0.3);padding-top:10px;">
+        <label class="help-text" style="display:block;margin-bottom:4px;">Limite d'appareils pour ce compte</label>
+        <div style="display:flex;gap:8px;">
+          <input type="number" id="devMaxInput" min="1" value="2" style="width:80px;">
+          <button class="ghost" id="devMaxSaveBtn" style="flex:1;">Mettre à jour la limite</button>
+        </div>
+        <p class="help-text" id="devMaxStatus" style="margin-top:6px;"></p>
+      </div>
     </div>
     <button class="ghost" id="subBack" style="width:100%;margin-top:10px;">Retour</button>
   `);
@@ -1887,15 +1897,26 @@ async function openSubscriptionAdminForm(){
       statusEl.textContent = `Abonnement activé pour ${email} — ${amount} ${unitLabel} à partir de maintenant.`;
     }catch(e){ statusEl.textContent = "Erreur : "+e.message; }
   });
+  let devLookupUserId = null;
+  let devLookupEmail = "";
   document.getElementById("devLookupBtn").addEventListener("click", async ()=>{
     const email = document.getElementById("devEmail").value.trim();
     const listEl = document.getElementById("devList");
+    const maxWrap = document.getElementById("devMaxWrap");
+    maxWrap.style.display = "none";
+    devLookupUserId = null;
     if(!email){ listEl.innerHTML = `<p class="help-text">Entrez un email.</p>`; return; }
     listEl.innerHTML = `<p class="help-text">Recherche…</p>`;
     try{
       const { data: userId, error: e1 } = await supabaseClient.rpc("find_user_id_by_email", {target_email: email});
       if(e1) throw e1;
       if(!userId){ listEl.innerHTML = `<p class="help-text">Aucun compte trouvé avec cet email.</p>`; return; }
+      devLookupUserId = userId;
+      devLookupEmail = email;
+      const { data: profileRow } = await supabaseClient.from("profiles").select("max_devices").eq("id", userId).single();
+      document.getElementById("devMaxInput").value = (profileRow && profileRow.max_devices) || 2;
+      document.getElementById("devMaxStatus").textContent = "";
+      maxWrap.style.display = "block";
       const { data: devices, error: e2 } = await supabaseClient.from("user_devices").select("device_id,device_label,first_seen,last_seen").eq("user_id", userId).order("last_seen",{ascending:false});
       if(e2) throw e2;
       if(!devices || !devices.length){ listEl.innerHTML = `<p class="help-text">Aucun appareil enregistré pour ce compte.</p>`; return; }
@@ -1913,6 +1934,19 @@ async function openSubscriptionAdminForm(){
       });
     }catch(e){ listEl.innerHTML = `<p class="help-text">Erreur : ${e.message}</p>`; }
   });
+  document.getElementById("devMaxSaveBtn").addEventListener("click", async ()=>{
+    const statusEl = document.getElementById("devMaxStatus");
+    if(!devLookupUserId){ statusEl.textContent = "Recherchez d'abord un compte."; return; }
+    const newMax = parseInt(document.getElementById("devMaxInput").value, 10);
+    if(!newMax || newMax<1){ statusEl.textContent = "Entrez un nombre valide (1 ou plus)."; return; }
+    statusEl.textContent = "Mise à jour…";
+    try{
+      const { error } = await supabaseClient.from("profiles").update({max_devices:newMax}).eq("id", devLookupUserId);
+      if(error) throw error;
+      await logAdminAction("update_max_devices", {user_id:devLookupUserId, email:devLookupEmail, max_devices:newMax});
+      statusEl.textContent = `Limite mise à jour : ${newMax} appareil(s) pour ${devLookupEmail}.`;
+    }catch(e){ statusEl.textContent = "Erreur : "+e.message; }
+  });
   await renderSubscriptionRequestsList();
 }
 
@@ -1920,7 +1954,7 @@ async function renderSubscriptionRequestsList(){
   const box = document.getElementById("subReqList");
   try{
     const { data, error } = await supabaseClient.from("subscription_requests")
-      .select("id,user_id,email,note,created_at").eq("status","pending").order("created_at",{ascending:true});
+      .select("id,user_id,note,created_at").eq("status","pending").order("created_at",{ascending:true});
     if(error) throw error;
     if(!data || !data.length){ box.innerHTML = `<p class="help-text">Aucune demande en attente.</p>`; return; }
     const userIds = [...new Set(data.map(r=>r.user_id))];
