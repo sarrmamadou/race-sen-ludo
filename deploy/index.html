@@ -342,12 +342,14 @@
         <input type="email" id="authEmail" placeholder="vous@exemple.com" style="margin-bottom:8px;">
         <div class="row"><label>Mot de passe</label></div>
         <input type="password" id="authPassword" placeholder="8 caractères minimum" style="margin-bottom:8px;">
-        <div class="row"><label>Confirmer le mot de passe</label></div>
-        <input type="password" id="authPasswordConfirm" placeholder="Ressaisir le mot de passe (pour la création de compte)" style="margin-bottom:6px;">
-        <label style="display:flex;align-items:center;gap:6px;margin-bottom:10px;font-size:0.85rem;color:var(--gold);cursor:pointer;">
-          <input type="checkbox" id="authShowPasswordToggle" style="width:auto;margin:0;">
-          Afficher les mots de passe
-        </label>
+        <div id="authPasswordConfirmWrap" style="display:none;">
+          <div class="row"><label>Confirmer le mot de passe</label></div>
+          <input type="password" id="authPasswordConfirm" placeholder="Ressaisir le mot de passe (pour la création de compte)" style="margin-bottom:6px;">
+          <label style="display:flex;align-items:center;gap:6px;margin-bottom:10px;font-size:0.85rem;color:var(--gold);cursor:pointer;">
+            <input type="checkbox" id="authShowPasswordToggle" style="width:auto;margin:0;">
+            Afficher les mots de passe
+          </label>
+        </div>
         <div style="display:flex;gap:8px;margin-bottom:8px;">
           <button class="primary" id="signInBtn" style="flex:1;">Connexion</button>
           <button class="ghost" id="signUpBtn" style="flex:1;">Créer un compte</button>
@@ -1596,6 +1598,12 @@ document.getElementById("paywallRecheckBtnNative").addEventListener("click", asy
 
 document.getElementById("signUpBtn").addEventListener("click", async ()=>{
   if(!supabaseReady){ setAuthStatus("Backend Supabase non configuré (voir SUPABASE_URL/KEY dans le code)."); return; }
+  const confirmWrap = document.getElementById("authPasswordConfirmWrap");
+  if(confirmWrap && confirmWrap.style.display === "none"){
+    confirmWrap.style.display = "block";
+    setAuthStatus('Confirmez votre mot de passe ci-dessus, puis cliquez à nouveau sur "Créer un compte".');
+    return;
+  }
   const email = document.getElementById("authEmail").value.trim();
   const password = document.getElementById("authPassword").value;
   const passwordConfirm = document.getElementById("authPasswordConfirm").value;
@@ -1606,6 +1614,7 @@ document.getElementById("signUpBtn").addEventListener("click", async ()=>{
   if(error){ setAuthStatus("Erreur : "+error.message); return; }
   if(data.user && !data.session){
     setAuthStatus("Compte créé. Vérifiez votre email pour confirmer, puis connectez-vous.");
+    if(confirmWrap) confirmWrap.style.display = "none";
   } else if(data.session){
     await handleAuthedSession(data.user);
   }
@@ -1615,6 +1624,11 @@ document.getElementById("authShowPasswordToggle").addEventListener("change", (e)
   const t = e.target.checked ? "text" : "password";
   document.getElementById("authPassword").type = t;
   document.getElementById("authPasswordConfirm").type = t;
+});
+
+document.getElementById("signInBtn").addEventListener("click", ()=>{
+  const confirmWrap = document.getElementById("authPasswordConfirmWrap");
+  if(confirmWrap) confirmWrap.style.display = "none";
 });
 
 document.getElementById("forgotPasswordLink").addEventListener("click", async (e)=>{
