@@ -224,6 +224,17 @@
     box-shadow:inset -6px -6px 10px rgba(0,0,0,0.18), inset 6px 6px 10px rgba(255,255,255,0.25);}
   .fx-balloon::after{content:"";position:absolute;left:50%;bottom:-22px;width:1px;height:22px;background:rgba(255,255,255,0.5);}
   @keyframes fxBalloonRise{ to{ transform:translateY(-130vh) translateX(var(--drift)); opacity:0; } }
+  /* Scènes africaines illustrées (baobabs, village, rivière, montagnes) sur
+     les écrans accueil / victoire / tournoi, avec un voile sombre pour garder
+     le texte lisible, et un léger scintillement. Le plateau de jeu actif garde
+     son habillage sobre habituel. */
+  .panel-scenic{background-size:cover;background-position:center;position:relative;}
+  .scene-accueil{background-image:linear-gradient(rgba(10,26,22,0.74),rgba(10,26,22,0.88)),url('https://www.ludo.sn/img/bg-accueil.jpg');}
+  .scene-victoire{background-image:linear-gradient(rgba(10,26,22,0.7),rgba(10,26,22,0.86)),url('https://www.ludo.sn/img/bg-victoire.jpg');background-size:cover;background-position:center;}
+  .scene-tournoi-info{background-image:linear-gradient(rgba(10,26,22,0.74),rgba(10,26,22,0.88)),url('https://www.ludo.sn/img/bg-tournoi-info.jpg');}
+  .scene-tournoi-bracket{background-image:linear-gradient(rgba(10,26,22,0.74),rgba(10,26,22,0.88)),url('https://www.ludo.sn/img/bg-tournoi-bracket.jpg');}
+  .sparkle{position:absolute;border-radius:50%;background:radial-gradient(circle, #fff8e0 0%, rgba(255,248,224,0) 72%);pointer-events:none;animation:sparkleTwinkle 3.4s ease-in-out infinite;}
+  @keyframes sparkleTwinkle{0%,100%{opacity:0.15;transform:scale(0.7);}50%{opacity:0.85;transform:scale(1.15);}}
   .footer-note{margin-top:24px;font-size:0.75rem;opacity:0.55;text-align:center;}
   input[type=file]{font-size:0.75rem;color:var(--sand);max-width:170px;}
 </style>
@@ -231,7 +242,7 @@
 <body>
 <div class="app">
   <header class="top">
-    <div class="brand">
+    <div class="brand" id="brandLogo" style="cursor:pointer;" title="Retour à l'accueil">
       <svg viewBox="0 0 512 512" width="48" height="48" xmlns="http://www.w3.org/2000/svg" style="border-radius:50%;display:block;">
         <defs>
           <radialGradient id="logo-bg" cx="35%" cy="26%" r="90%">
@@ -309,9 +320,11 @@
     </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
       <span class="user-bar" id="userBar"></span>
+      <button class="ghost" id="homeBtnHeader" style="display:none;">🏠 Accueil</button>
       <button class="ghost" id="helpBtn">Règles &amp; hypothèses</button>
       <button class="ghost" id="adminBtn" title="Réservé aux comptes administrateur" style="display:none;">⚙ Administration</button>
       <button class="ghost" id="logoutBtn" style="display:none;">Déconnexion</button>
+      <button class="ghost" id="deleteAccountBtn" style="display:none;color:#e07a5f;">🗑 Supprimer mon compte</button>
     </div>
   </header>
 
@@ -322,7 +335,8 @@
 
   <div class="layout" id="layoutRoot">
     <div>
-      <div class="panel" id="authPanel">
+      <div class="panel panel-scenic scene-accueil" id="authPanel">
+<span class="sparkle" style="top:10%;left:12%;width:6px;height:6px;animation-delay:0s;"></span><span class="sparkle" style="top:22%;left:80%;width:4px;height:4px;animation-delay:1.1s;"></span><span class="sparkle" style="top:68%;left:18%;width:5px;height:5px;animation-delay:2s;"></span><span class="sparkle" style="top:78%;left:86%;width:4px;height:4px;animation-delay:0.6s;"></span>
         <h3>Compte joueur</h3>
         <div class="row"><label>Email</label></div>
         <input type="email" id="authEmail" placeholder="vous@exemple.com" style="margin-bottom:8px;">
@@ -332,8 +346,19 @@
           <button class="primary" id="signInBtn" style="flex:1;">Connexion</button>
           <button class="ghost" id="signUpBtn" style="flex:1;">Créer un compte</button>
         </div>
+        <p style="text-align:right;margin:-4px 0 10px;">
+          <a href="#" id="forgotPasswordLink" style="color:var(--gold);font-size:0.85rem;text-decoration:underline;">Mot de passe oublié ?</a>
+        </p>
         <button class="ghost" id="guestBtn" style="width:100%;">Continuer en invité (2 joueurs, 1 dé, sans historique)</button>
         <p class="help-text" id="authStatus"></p>
+      </div>
+
+      <div class="panel panel-scenic scene-accueil" id="resetPasswordPanel" style="display:none;">
+        <h3>Nouveau mot de passe</h3>
+        <p class="help-text">Choisis un nouveau mot de passe pour ton compte RACE-SEN-LUDO.</p>
+        <input type="password" id="resetPasswordInput" placeholder="Nouveau mot de passe (6 caractères min.)" style="margin-bottom:10px;">
+        <button class="primary" id="resetPasswordSaveBtn" style="width:100%;">Enregistrer le nouveau mot de passe</button>
+        <p class="help-text" id="resetPasswordStatus"></p>
       </div>
 
       <div class="panel" id="paywallPanel" style="display:none;">
@@ -363,7 +388,8 @@
         <button class="ghost" id="paywallLogoutBtn" style="width:100%;">Déconnexion</button>
       </div>
 
-      <div class="panel" id="modeSwitchPanel" style="display:none;">
+      <div class="panel panel-scenic scene-accueil" id="modeSwitchPanel" style="display:none;">
+<span class="sparkle" style="top:10%;left:12%;width:6px;height:6px;animation-delay:0s;"></span><span class="sparkle" style="top:22%;left:80%;width:4px;height:4px;animation-delay:1.1s;"></span><span class="sparkle" style="top:68%;left:18%;width:5px;height:5px;animation-delay:2s;"></span><span class="sparkle" style="top:78%;left:86%;width:4px;height:4px;animation-delay:0.6s;"></span>
         <div style="display:flex;gap:8px;">
           <button class="primary" id="modeLocalBtn" style="flex:1;">🎲 Partie locale</button>
           <button class="ghost" id="modeOnlineBtn" style="flex:1;">🌐 Partie en ligne</button>
@@ -395,6 +421,7 @@
         <div id="onlineRoom" style="display:none;">
           <p class="help-text">Code du salon : <b id="roomCodeDisplay"></b> — partagez-le aux autres joueurs.</p>
           <div id="seatClaims"></div>
+          <div id="roomLeaderboard" style="margin-top:10px;"></div>
           <div class="row">
             <label>Mode de dé</label>
             <select id="onlineDiceMode">
@@ -403,6 +430,7 @@
             </select>
           </div>
           <button class="primary" id="onlineStartBtn" style="width:100%;margin-top:8px;display:none;">Démarrer la partie en ligne</button>
+          <button class="ghost" id="spectateBtn" style="width:100%;margin-top:8px;">👀 Supporter (regarder sans jouer)</button>
           <button class="ghost" id="leaveRoomBtn" style="width:100%;margin-top:6px;">Quitter le salon</button>
         </div>
       </div>
@@ -420,9 +448,12 @@
         </div>
       </div>
 
-      <div class="panel" id="tournamentPanel" style="display:none;">
+      <div class="panel panel-scenic scene-tournoi-info" id="tournamentPanel" style="display:none;">
+<span class="sparkle" style="top:10%;left:12%;width:6px;height:6px;animation-delay:0s;"></span><span class="sparkle" style="top:22%;left:80%;width:4px;height:4px;animation-delay:1.1s;"></span><span class="sparkle" style="top:68%;left:18%;width:5px;height:5px;animation-delay:2s;"></span><span class="sparkle" style="top:78%;left:86%;width:4px;height:4px;animation-delay:0.6s;"></span>
         <h3>🏆 Tournoi du mois</h3>
         <div id="tournamentInfo" class="help-text"></div>
+        <div id="tournamentJoinRow" style="display:flex;gap:8px;margin-top:8px;"></div>
+        <div id="tournamentBracket" style="margin-top:10px;"></div>
         <div id="tournamentLeaderboard" style="margin-top:8px;"></div>
       </div>
     </div>
@@ -434,10 +465,13 @@
           <button class="ghost" id="soundTestBtn" title="Tester le son directement" style="flex:1;">🔈 Tester</button>
         </div>
         <p class="help-text" id="turnHint"></p>
+        <p class="help-text" id="inGameRoomCode" style="display:none;font-weight:700;"></p>
+        <p class="help-text" id="spectatorNotice" style="display:none;">👀 Vous regardez cette partie en tant que supporter — vous ne contrôlez aucune couleur.</p>
         <div style="display:flex;gap:8px;margin-top:8px;">
           <button class="ghost" id="fsToggleBtn" style="flex:1;">⛶ Plein écran</button>
           <button class="ghost" id="historyBtn" style="flex:1;">📜 Historique</button>
         </div>
+        <button class="ghost" id="homeBtnGame" style="width:100%;margin-top:8px;">🏠 Accueil</button>
       </div>
 
       <div class="fs-header-row">
@@ -936,6 +970,18 @@ function hideSetupPanels(){
     if(el) el.style.display="none";
   });
   setLayoutCentered(true);
+  setHomeBtnVisible(true);
+  const codeEl = document.getElementById("inGameRoomCode");
+  if(codeEl){
+    if(online && online.roomCode){
+      codeEl.textContent = "Code du salon : "+online.roomCode;
+      codeEl.style.display="block";
+    } else {
+      codeEl.style.display="none";
+    }
+  }
+  const specEl = document.getElementById("spectatorNotice");
+  if(specEl) specEl.style.display = (online && online.mySeats && online.mySeats.size===0) ? "block" : "none";
 }
 
 // Centre le contenu sur la page tant qu'aucune partie n'est réellement lancée
@@ -945,6 +991,36 @@ function setLayoutCentered(centered){
   const layout = document.getElementById("layoutRoot");
   if(layout) layout.classList.toggle("layout-centered", centered);
 }
+
+// Bouton "🏠 Accueil" : permet de quitter une partie en cours (locale ou en
+// ligne) et de revenir à l'écran de sélection de mode / configuration, ce
+// qui n'était possible nulle part une fois la partie démarrée.
+function setHomeBtnVisible(show){
+  const btn = document.getElementById("homeBtnHeader");
+  if(btn) btn.style.display = show ? "inline-block" : "none";
+}
+function goHome(){
+  if(state && !confirm("Quitter la partie en cours et retourner à l'accueil ?")) return;
+  if(document.body.classList.contains("fs-mode")) setFullscreenMode(false);
+  if(online){
+    if(online.channel && supabaseClient) supabaseClient.removeChannel(online.channel);
+    online = null;
+  }
+  state = null;
+  document.getElementById("gamePanel").style.display="none";
+  document.getElementById("stickyTurnBar").style.display="none";
+  document.getElementById("turnBanner").style.display="none";
+  const onlineSetupEl = document.getElementById("onlineSetup");
+  const onlineRoomEl = document.getElementById("onlineRoom");
+  if(onlineSetupEl) onlineSetupEl.style.display="block";
+  if(onlineRoomEl) onlineRoomEl.style.display="none";
+  setHomeBtnVisible(false);
+  showGameUi();
+  loadActiveTournament();
+}
+document.getElementById("homeBtnHeader").addEventListener("click", goHome);
+document.getElementById("homeBtnGame").addEventListener("click", goHome);
+document.getElementById("brandLogo").addEventListener("click", goHome);
 
 document.getElementById("startBtn").addEventListener("click", async ()=>{
   const seats = {};
@@ -999,10 +1075,19 @@ function subscribeOnlineChannel(code){
   const channel = supabaseClient.channel("race-sen-ludo:"+code);
   channel.on("broadcast", {event:"seats"}, ({payload})=>{
     online.seatsMeta = payload.seatsMeta;
+    // Reconnexion / changement d'appareil : si une couleur est déjà
+    // réservée sous mon propre nom (mon email), je la récupère
+    // automatiquement — sinon la partie reste bloquée pour toujours dès
+    // qu'on change d'onglet/appareil ou qu'on recharge la page.
+    const myLabel = myDisplayLabel();
+    Object.entries(online.seatsMeta).forEach(([c, meta])=>{
+      if(meta && !meta.bot && meta.name === myLabel) online.mySeats.add(c);
+    });
     renderSeatClaims();
   });
   channel.on("broadcast", {event:"state"}, ({payload})=>{
     state = payload;
+    closeModal();
     document.getElementById("gamePanel").style.display="block";
   document.getElementById("stickyTurnBar").style.display="flex";
     hideSetupPanels();
@@ -1031,6 +1116,7 @@ document.getElementById("createRoomBtn").addEventListener("click", ()=>{
   document.getElementById("roomCodeDisplay").textContent = code;
   document.getElementById("onlineStartBtn").style.display="block";
   renderSeatClaims();
+  renderRoomLeaderboard(code, "roomLeaderboard");
 });
 
 document.getElementById("joinRoomBtn").addEventListener("click", ()=>{
@@ -1043,6 +1129,7 @@ document.getElementById("joinRoomBtn").addEventListener("click", ()=>{
   document.getElementById("roomCodeDisplay").textContent = code;
   document.getElementById("onlineStartBtn").style.display="none";
   renderSeatClaims();
+  renderRoomLeaderboard(code, "roomLeaderboard");
 });
 
 document.getElementById("leaveRoomBtn").addEventListener("click", ()=>{
@@ -1053,11 +1140,31 @@ document.getElementById("leaveRoomBtn").addEventListener("click", ()=>{
   document.getElementById("onlineRoom").style.display="none";
   document.getElementById("gamePanel").style.display="none";
   document.getElementById("stickyTurnBar").style.display="none";
+  setHomeBtnVisible(false);
+});
+document.getElementById("spectateBtn").addEventListener("click", ()=>{
+  if(!online){ return; }
+  if(state){
+    document.getElementById("gamePanel").style.display="block";
+    document.getElementById("stickyTurnBar").style.display="flex";
+    hideSetupPanels();
+    renderAll();
+  } else {
+    if(online.channel) online.channel.send({type:"broadcast", event:"sync_request", payload:{}});
+    alert("Connexion à la partie… si elle a déjà commencé, reclique sur \"Supporter\" dans un instant. Sinon elle passera automatiquement sous tes yeux dès qu'elle démarrera.");
+  }
 });
 
 function renderSeatClaims(){
   const box = document.getElementById("seatClaims");
   box.innerHTML = "";
+  if(online.mySeats.size){
+    const summary = document.createElement("p");
+    summary.className = "help-text";
+    summary.style.marginBottom = "6px";
+    summary.innerHTML = "Vous contrôlez : <b>" + Array.from(online.mySeats).map(c=>COLOR_LABEL[c]).join(", ") + "</b> — vous pouvez réserver jusqu'à 4 couleurs.";
+    box.appendChild(summary);
+  }
   COLORS.forEach(c=>{
     const meta = online.seatsMeta[c];
     const row = document.createElement("div");
@@ -1112,7 +1219,7 @@ document.getElementById("onlineStartBtn").addEventListener("click", async ()=>{
     seats[c] = meta ? (meta.bot ? "bot" : "human") : "off";
   });
   const activeCount = Object.values(seats).filter(v=>v!=="off").length;
-  if(activeCount<2){ alert("Il faut au moins 2 couleurs réservées ou en bot."); return; }
+  if(activeCount<1){ alert("Réservez ou assignez au moins une couleur avant de démarrer."); return; }
   const diceMode = parseInt(document.getElementById("onlineDiceMode").value,10);
   state = newGame(seats, diceMode);
   document.getElementById("gamePanel").style.display="block";
@@ -1162,15 +1269,19 @@ function refreshUserBar(){
   const bar = document.getElementById("userBar");
   const logoutBtn = document.getElementById("logoutBtn");
   const adminBtn = document.getElementById("adminBtn");
+  const deleteAccountBtn = document.getElementById("deleteAccountBtn");
   if(currentUser){
     bar.innerHTML = `${currentUser.email} ${currentProfile? `<span class="role-badge">${currentProfile.role}</span>`:""}`;
     logoutBtn.style.display="inline-block";
+    if(deleteAccountBtn) deleteAccountBtn.style.display="inline-block";
   } else if(isGuest){
     bar.innerHTML = `Invité <span class="role-badge">sans historique</span>`;
     logoutBtn.style.display="inline-block";
+    if(deleteAccountBtn) deleteAccountBtn.style.display="none";
   } else {
     bar.innerHTML = "";
     logoutBtn.style.display="none";
+    if(deleteAccountBtn) deleteAccountBtn.style.display="none";
   }
   if(adminBtn) adminBtn.style.display = (currentProfile && currentProfile.role==="admin") ? "inline-block" : "none";
 }
@@ -1185,9 +1296,11 @@ function showGameUi(){
   if(onlineBtn) onlineBtn.style.display = isGuest ? "none" : "flex";
   applyGuestRestrictions();
   setLayoutCentered(true);
+  setHomeBtnVisible(false);
 }
 function showAuthUi(){
   document.getElementById("authPanel").style.display="block";
+  document.getElementById("resetPasswordPanel").style.display="none";
   document.getElementById("paywallPanel").style.display="none";
   document.getElementById("modeSwitchPanel").style.display="none";
   document.getElementById("setupPanel").style.display="none";
@@ -1195,6 +1308,19 @@ function showAuthUi(){
   document.getElementById("gamePanel").style.display="none";
   document.getElementById("stickyTurnBar").style.display="none";
   setLayoutCentered(true);
+  setHomeBtnVisible(false);
+}
+function showResetPasswordUi(){
+  document.getElementById("authPanel").style.display="none";
+  document.getElementById("resetPasswordPanel").style.display="block";
+  document.getElementById("paywallPanel").style.display="none";
+  document.getElementById("modeSwitchPanel").style.display="none";
+  document.getElementById("setupPanel").style.display="none";
+  document.getElementById("onlinePanel").style.display="none";
+  document.getElementById("gamePanel").style.display="none";
+  document.getElementById("stickyTurnBar").style.display="none";
+  setLayoutCentered(true);
+  setHomeBtnVisible(false);
 }
 function showPaywall(){
   document.getElementById("authPanel").style.display="none";
@@ -1204,10 +1330,11 @@ function showPaywall(){
   document.getElementById("onlinePanel").style.display="none";
   document.getElementById("gamePanel").style.display="none";
   document.getElementById("stickyTurnBar").style.display="none";
+  setHomeBtnVisible(false);
   // Dans l'app mobile (App Store/Google Play), on ne montre que l'achat natif
   // (conformité obligatoire) ; sur le web, on garde le QR code Wave.
-  document.getElementById("paywallNativeSection").style.display = isNativeApp() ? "block" : "none";
-  document.getElementById("paywallWebSection").style.display = isNativeApp() ? "none" : "block";
+  document.getElementById("paywallNativeSection").style.display = isIOSNativeApp() ? "block" : "none";
+  document.getElementById("paywallWebSection").style.display = isIOSNativeApp() ? "none" : "block";
   renderPaywallQr();
   setLayoutCentered(true);
   // Filet de sécurité : si l'affichage du paywall venait d'une lecture de profil
@@ -1288,8 +1415,15 @@ function isNativeApp(){
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 }
 
+// Play Billing n'est pas disponible pour les comptes developpeurs enregistres
+// au Senegal (pas de compte marchand Google Payments possible) -> sur Android,
+// on affiche toujours le parcours Wave/web, jamais le bouton d'achat natif.
+function isIOSNativeApp(){
+  return !!(isNativeApp() && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === "ios");
+}
+
 async function initNativePurchases(userId){
-  if(!isNativeApp()) return;
+  if(!isIOSNativeApp()) return;
   try{
     const { Purchases } = window.Capacitor.Plugins;
     await Purchases.configure({ apiKey: REVENUECAT_API_KEY, appUserID: userId });
@@ -1300,7 +1434,7 @@ async function initNativePurchases(userId){
 // réussi, active aussi l'abonnement côté Supabase (pour rester cohérent avec
 // la version web, qui lit toujours subscription_active_until).
 async function purchaseNativeSubscription(){
-  if(!isNativeApp()){ alert("Achat disponible uniquement depuis l'app mobile."); return; }
+  if(!isIOSNativeApp()){ alert("Achat disponible uniquement depuis l'app mobile (iOS)."); return; }
   try{
     const { Purchases } = window.Capacitor.Plugins;
     const offerings = await Purchases.getOfferings();
@@ -1464,6 +1598,35 @@ document.getElementById("signUpBtn").addEventListener("click", async ()=>{
   }
 });
 
+document.getElementById("forgotPasswordLink").addEventListener("click", async (e)=>{
+  e.preventDefault();
+  if(!supabaseReady){ setAuthStatus("Backend Supabase non configuré (voir SUPABASE_URL/KEY dans le code)."); return; }
+  const email = document.getElementById("authEmail").value.trim();
+  if(!email){ setAuthStatus('Renseigne d\'abord ton email ci-dessus, puis clique sur "Mot de passe oublié ?".'); return; }
+  setAuthStatus("Envoi du lien de réinitialisation…");
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  if(error){ setAuthStatus("Erreur : "+error.message); return; }
+  setAuthStatus("Email envoyé ! Vérifie ta boîte de réception (et les spams) pour le lien de réinitialisation.");
+});
+
+document.getElementById("resetPasswordSaveBtn").addEventListener("click", async ()=>{
+  const statusEl = document.getElementById("resetPasswordStatus");
+  const newPassword = document.getElementById("resetPasswordInput").value;
+  if(!newPassword || newPassword.length<6){ statusEl.textContent="Le nouveau mot de passe doit contenir au moins 6 caractères."; return; }
+  statusEl.textContent="Enregistrement…";
+  const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+  if(error){ statusEl.textContent="Erreur : "+error.message; return; }
+  statusEl.textContent="Mot de passe mis à jour !";
+  const { data } = await supabaseClient.auth.getSession();
+  if(data && data.session && data.session.user){
+    await handleAuthedSession(data.session.user);
+  } else {
+    showAuthUi();
+  }
+});
+
 document.getElementById("signInBtn").addEventListener("click", async ()=>{
   if(!supabaseReady){ setAuthStatus("Backend Supabase non configuré (voir SUPABASE_URL/KEY dans le code)."); return; }
   const email = document.getElementById("authEmail").value.trim();
@@ -1516,6 +1679,30 @@ document.getElementById("logoutBtn").addEventListener("click", async ()=>{
   showAuthUi();
   state=null;
 });
+document.getElementById("deleteAccountBtn").addEventListener("click", async ()=>{
+  if(!currentUser || !supabaseReady) return;
+  const sure = confirm("Cette action supprime DÉFINITIVEMENT ton compte RACE-SEN-LUDO : email, mot de passe, profil, abonnement et appareils enregistrés. Cette action est IRRÉVERSIBLE. Continuer ?");
+  if(!sure) return;
+  const btn = document.getElementById("deleteAccountBtn");
+  btn.disabled = true; btn.textContent = "Suppression…";
+  try{
+    const { data, error } = await supabaseClient.functions.invoke("delete-account");
+    if(error) throw error;
+    if(data && data.ok){
+      currentUser=null; currentProfile=null; isGuest=false;
+      refreshUserBar();
+      showAuthUi();
+      state=null;
+      alert("Ton compte a bien été supprimé.");
+    } else {
+      alert("Échec de la suppression : "+((data&&data.error)||"erreur inconnue."));
+    }
+  }catch(e){
+    alert("Échec de la suppression : "+(e.message||e));
+  }finally{
+    btn.disabled = false; btn.textContent = "🗑 Supprimer mon compte";
+  }
+});
 
 async function initAuthFromSession(){
   if(!supabaseReady){ setAuthStatus("Backend Supabase non configuré — la connexion est indisponible."); return; }
@@ -1526,12 +1713,18 @@ async function initAuthFromSession(){
   if(waveParam){
     window.history.replaceState({}, "", window.location.pathname);
   }
-  const { data } = await supabaseClient.auth.getSession();
-  if(data && data.session && data.session.user){
-    await handleAuthedSession(data.session.user);
+  const isPasswordRecovery = window.location.hash.includes("type=recovery");
+  if(isPasswordRecovery){
+    showResetPasswordUi();
+  } else {
+    const { data } = await supabaseClient.auth.getSession();
+    if(data && data.session && data.session.user){
+      await handleAuthedSession(data.session.user);
+    }
   }
   supabaseClient.auth.onAuthStateChange((event, session)=>{
     if(event==="SIGNED_OUT"){ currentUser=null; currentProfile=null; refreshUserBar(); }
+    if(event==="PASSWORD_RECOVERY"){ showResetPasswordUi(); }
   });
 }
 
@@ -1673,7 +1866,7 @@ function openAdminForm(){
     <button class="ghost" id="admCellImageBtn" style="width:100%;margin-top:8px;">🖼️ Personnaliser une case précise</button>
     <button class="ghost" id="admYardImageBtn" style="width:100%;margin-top:8px;">🏠 Personnaliser un bercail</button>
     <button class="ghost" id="admSubsBtn" style="width:100%;margin-top:8px;">💳 Gérer les abonnements</button>
-    <button class="ghost" id="admTournamentBtn" style="width:100%;margin-top:8px;">🏆 Créer un tournoi du mois</button>
+    <button class="ghost" id="admTournamentBtn" style="width:100%;margin-top:8px;">${activeTournament ? "✏️ Modifier le tournoi du mois" : "🏆 Créer un tournoi du mois"}</button>
     <button class="ghost" id="admClose" style="width:100%;margin-top:6px;">Fermer</button>
   `);
   wireImageUploader("admCellFile", "admCell", "admUploadStatus", "board-cellimg");
@@ -1716,7 +1909,7 @@ function openAdminForm(){
     closeModal();
   });
   document.getElementById("admClose").addEventListener("click", closeModal);
-  document.getElementById("admTournamentBtn").addEventListener("click", openTournamentForm);
+  document.getElementById("admTournamentBtn").addEventListener("click", ()=> openTournamentForm());
   document.getElementById("admCellImageBtn").addEventListener("click", openCellImageForm);
   document.getElementById("admYardImageBtn").addEventListener("click", openYardImageForm);
   document.getElementById("admSubsBtn").addEventListener("click", openSubscriptionAdminForm);
@@ -1847,6 +2040,9 @@ async function openSubscriptionAdminForm(){
   showModal(`
     <h3>💳 Gestion des abonnements</h3>
     <div style="text-align:left;">
+      <h4 style="color:var(--gold);margin:0 0 6px;">👥 Tous les comptes</h4>
+      <button class="ghost" id="allAccountsRefreshBtn" style="width:100%;margin-bottom:8px;">🔄 Rafraîchir la liste</button>
+      <div id="allAccountsList" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"><p class="help-text">Chargement…</p></div>
       <label class="help-text" style="display:block;margin-bottom:4px;">Activer un compte par email</label>
       <input type="email" id="subEmail" placeholder="joueur@exemple.com" style="width:100%;margin-bottom:8px;">
       <div style="display:flex;gap:8px;margin-bottom:8px;">
@@ -1947,7 +2143,50 @@ async function openSubscriptionAdminForm(){
       statusEl.textContent = `Limite mise à jour : ${newMax} appareil(s) pour ${devLookupEmail}.`;
     }catch(e){ statusEl.textContent = "Erreur : "+e.message; }
   });
+  document.getElementById("allAccountsRefreshBtn").addEventListener("click", renderAllAccountsList);
+  await renderAllAccountsList();
   await renderSubscriptionRequestsList();
+}
+
+// Liste tous les comptes (confirmés/non confirmés, activés/non activés) via
+// la fonction RPC admin, avec un bouton d'activation directe pour 1 an.
+async function renderAllAccountsList(){
+  const box = document.getElementById("allAccountsList");
+  if(!box) return;
+  box.innerHTML = `<p class="help-text">Chargement…</p>`;
+  try{
+    const { data, error } = await supabaseClient.rpc("list_all_users_for_admin");
+    if(error) throw error;
+    if(!data || !data.length){ box.innerHTML = `<p class="help-text">Aucun compte trouvé.</p>`; return; }
+    box.innerHTML = data.map(u=>{
+      const confirmed = !!u.email_confirmed_at;
+      const activeUntil = u.subscription_active_until ? new Date(u.subscription_active_until) : null;
+      const active = activeUntil && activeUntil.getTime() > Date.now();
+      return `
+      <div style="border:1px solid rgba(217,164,65,0.25);border-radius:8px;padding:8px;margin-bottom:8px;">
+        <div><b>${u.display_name || u.email || u.id}</b>${u.role==="admin"?' <span class="role-badge">admin</span>':''}</div>
+        <div class="help-text" style="font-size:0.75rem;">${u.email||"(email inconnu)"}</div>
+        <div class="help-text" style="font-size:0.75rem;">
+          ${confirmed ? "✅ Email confirmé" : "❌ Email non confirmé"} —
+          ${active ? "✅ Actif jusqu'au "+activeUntil.toLocaleDateString('fr-FR') : "⛔ Non activé"}
+        </div>
+        <button class="primary activateAccBtn" data-userid="${u.id}" data-email="${u.email||''}" style="width:100%;margin-top:6px;font-size:0.8rem;padding:6px;">✅ Activer (1 an)</button>
+      </div>`;
+    }).join("");
+    box.querySelectorAll(".activateAccBtn").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const userId = btn.dataset.userid, email = btn.dataset.email;
+        const until = new Date(Date.now() + 365*24*3600*1000).toISOString();
+        btn.disabled = true; btn.textContent = "Activation…";
+        try{
+          const { error } = await supabaseClient.from("profiles").update({subscription_active_until: until}).eq("id", userId);
+          if(error) throw error;
+          await logAdminAction("activate_subscription_1y", {userId, email, until});
+          await renderAllAccountsList();
+        }catch(e){ alert("Échec de l'activation : "+e.message); btn.disabled=false; btn.textContent="✅ Activer (1 an)"; }
+      });
+    });
+  }catch(e){ box.innerHTML = `<p class="help-text">Erreur : ${e.message}</p>`; }
 }
 
 async function renderSubscriptionRequestsList(){
@@ -1994,24 +2233,31 @@ async function renderSubscriptionRequestsList(){
   }catch(e){ box.innerHTML = `<p class="help-text">Impossible de charger les demandes : ${e.message}</p>`; }
 }
 
-function openTournamentForm(){
+function openTournamentForm(forceNew){
+  const editing = !!(activeTournament && !forceNew);
+  const t = editing ? activeTournament : null;
+  const esc = (v)=> (v||"").toString().replace(/"/g, "&quot;");
+  const toDateInput = (iso)=> iso ? new Date(iso).toISOString().slice(0,10) : "";
   showModal(`
-    <h3>🏆 Nouveau tournoi sponsorisé</h3>
+    <h3>🏆 ${editing ? "Modifier le tournoi actif" : "Nouveau tournoi sponsorisé"}</h3>
     <div style="text-align:left;">
       <label class="help-text">Nom du tournoi</label>
-      <input type="text" id="tName" placeholder="Tournoi RACE-SEN-LUDO — Août" style="margin:4px 0 10px;">
+      <input type="text" id="tName" placeholder="Tournoi RACE-SEN-LUDO — Août" style="margin:4px 0 10px;" value="${t? esc(t.name) : ''}">
       <label class="help-text">Sponsor</label>
-      <input type="text" id="tSponsor" placeholder="Nom du sponsor" style="margin:4px 0 10px;">
+      <input type="text" id="tSponsor" placeholder="Nom du sponsor" style="margin:4px 0 10px;" value="${t? esc(t.sponsor_name) : ''}">
       <label class="help-text">Logo sponsor (URL)</label>
-      <input type="text" id="tLogo" style="margin:4px 0 10px;">
+      <input type="text" id="tLogo" style="margin:4px 0 10px;" value="${t? esc(t.sponsor_logo_url) : ''}">
       <label class="help-text">Récompense</label>
-      <input type="text" id="tPrize" placeholder="Ex: 50 000 FCFA + lot sponsor" style="margin:4px 0 10px;">
+      <input type="text" id="tPrize" placeholder="Ex: 50 000 FCFA + lot sponsor" style="margin:4px 0 10px;" value="${t? esc(t.prize_description) : ''}">
       <label class="help-text">Début</label>
-      <input type="date" id="tStart" style="margin:4px 0 10px;">
+      <input type="date" id="tStart" style="margin:4px 0 10px;" value="${t? toDateInput(t.starts_at) : ''}">
       <label class="help-text">Fin</label>
-      <input type="date" id="tEnd" style="margin:4px 0 10px;">
+      <input type="date" id="tEnd" style="margin:4px 0 10px;" value="${t? toDateInput(t.ends_at) : ''}">
     </div>
-    <button class="primary" id="tSave" style="width:100%;">Créer le tournoi et choisir les participants</button>
+    <button class="primary" id="tSave" style="width:100%;">${editing ? "💾 Enregistrer les modifications" : "Créer le tournoi et choisir les participants"}</button>
+    ${editing ? '<button class="ghost" id="tNewBtn" style="width:100%;margin-top:8px;">➕ Créer un nouveau tournoi</button>' : ""}
+    ${editing ? '<button class="ghost" id="tPoolsBtn" style="width:100%;margin-top:8px;">🏆 Créer les poules du tour suivant</button>' : ""}
+    ${editing ? '<button class="ghost" id="tDeleteBtn" style="width:100%;margin-top:8px;color:#e35b5b;">🗑️ Supprimer ce tournoi</button>' : ""}
     <button class="ghost" id="tManageBtn" style="width:100%;margin-top:8px;">👥 Gérer les participants du tournoi actif</button>
     <button class="ghost" id="tClose" style="width:100%;margin-top:6px;">Retour</button>
   `);
@@ -2020,21 +2266,44 @@ function openTournamentForm(){
     const starts = document.getElementById("tStart").value;
     const ends = document.getElementById("tEnd").value;
     if(!name || !starts || !ends){ alert("Nom, début et fin sont requis."); return; }
+    const payload = {
+      name, sponsor_name: document.getElementById("tSponsor").value.trim(),
+      sponsor_logo_url: document.getElementById("tLogo").value.trim(),
+      prize_description: document.getElementById("tPrize").value.trim(),
+      starts_at: new Date(starts).toISOString(),
+      ends_at: new Date(ends+"T23:59:59").toISOString()
+    };
     try{
-      const { data, error } = await supabaseClient.from("tournaments").insert({
-        name, sponsor_name: document.getElementById("tSponsor").value.trim(),
-        sponsor_logo_url: document.getElementById("tLogo").value.trim(),
-        prize_description: document.getElementById("tPrize").value.trim(),
-        starts_at: new Date(starts).toISOString(),
-        ends_at: new Date(ends+"T23:59:59").toISOString(),
-        created_by: currentUser.id
-      }).select("id").single();
-      if(error) throw error;
-      await logAdminAction("create_tournament", {name, starts, ends});
-      loadActiveTournament();
-      openTournamentParticipantsForm(data.id, name);
-    }catch(e){ alert("Échec de création du tournoi : "+e.message); }
+      if(editing){
+        const { error } = await supabaseClient.from("tournaments").update(payload).eq("id", t.id);
+        if(error) throw error;
+        await logAdminAction("update_tournament", {id:t.id, name});
+        await loadActiveTournament();
+        closeModal();
+      } else {
+        const { data, error } = await supabaseClient.from("tournaments").insert({...payload, created_by: currentUser.id}).select("id").single();
+        if(error) throw error;
+        await logAdminAction("create_tournament", {name, starts, ends});
+        await loadActiveTournament();
+        openTournamentParticipantsForm(data.id, name);
+      }
+    }catch(e){ alert("Échec de l'enregistrement du tournoi : "+e.message); }
   });
+  if(editing){
+    document.getElementById("tNewBtn").addEventListener("click", ()=> openTournamentForm(true));
+    document.getElementById("tPoolsBtn").addEventListener("click", createTournamentPools);
+    document.getElementById("tDeleteBtn").addEventListener("click", async ()=>{
+      if(!confirm(`Supprimer définitivement le tournoi "${t.name}" ? Cette action est irréversible (le classement et les participants associés seront aussi supprimés).`)) return;
+      try{
+        await supabaseClient.from("tournament_participants").delete().eq("tournament_id", t.id);
+        const { error } = await supabaseClient.from("tournaments").delete().eq("id", t.id);
+        if(error) throw error;
+        await logAdminAction("delete_tournament", {id:t.id, name:t.name});
+        await loadActiveTournament();
+        openTournamentForm(true);
+      }catch(e){ alert("Échec de la suppression du tournoi : "+e.message); }
+    });
+  }
   document.getElementById("tManageBtn").addEventListener("click", ()=>{
     if(!activeTournament){ alert("Aucun tournoi actif pour l'instant — crée-en un d'abord."); return; }
     openTournamentParticipantsForm(activeTournament.id, activeTournament.name);
@@ -2089,13 +2358,64 @@ async function openTournamentParticipantsForm(tournamentId, tournamentName){
 async function createGameRowInSupabase(seats, diceMode){
   if(!supabaseReady || !currentUser){ state.gameId=null; return; }
   try{
+    const playerEmails = online
+      ? Object.fromEntries(Object.entries(online.seatsMeta||{}).map(([c,m])=>[c, m.name]))
+      : null;
     const { data, error } = await supabaseClient.from("games").insert({
       user_id: currentUser.id, dice_mode: diceMode, seats, started_at: new Date().toISOString(),
-      tournament_id: activeTournament ? activeTournament.id : null
+      tournament_id: activeTournament ? activeTournament.id : null,
+      room_code: online ? online.roomCode : null,
+      player_emails: playerEmails
     }).select("id").single();
     if(error) throw error;
     state.gameId = data.id;
   }catch(e){ console.warn("games insert failed", e); state.gameId=null; }
+}
+
+// Classement d'un salon en ligne donné : nombre de parties jouées, et
+// nombre de victoires par email — le joueur en tête est le "BOROM KËRGI".
+async function renderRoomLeaderboard(roomCode, targetElId){
+  const el = document.getElementById(targetElId);
+  if(!el) return;
+  if(!roomCode || !supabaseReady){ el.innerHTML=""; return; }
+  el.innerHTML = `<p class="help-text">Chargement du classement…</p>`;
+  try{
+    const { data, error } = await supabaseClient.from("games")
+      .select("winner, player_emails").eq("room_code", roomCode).not("winner","is",null);
+    if(error) throw error;
+    const totalGames = data ? data.length : 0;
+    if(!totalGames){
+      el.innerHTML = `<p class="help-text">Aucune partie terminée dans ce salon pour l'instant.</p>`;
+      return;
+    }
+    const wins = {};
+    data.forEach(g=>{
+      const email = g.player_emails ? g.player_emails[g.winner] : null;
+      if(email) wins[email] = (wins[email]||0)+1;
+    });
+    const ranking = Object.entries(wins).sort((a,b)=>b[1]-a[1]);
+    el.innerHTML = `<p class="help-text" style="font-weight:700;color:var(--gold);margin-bottom:4px;">🏆 Classement de ce salon (${totalGames} partie${totalGames>1?"s":""} jouée${totalGames>1?"s":""})</p>` +
+      (ranking.length ? ranking.map(([email,w],i)=>
+        `<div class="help-text" style="font-size:0.8rem;">${i===0?"👑 ":""}${email} — ${w} victoire${w>1?"s":""}${i===0?' — <b>BOROM KËRGI</b>':''}</div>`
+      ).join("") : `<p class="help-text">Pas encore de vainqueur identifié.</p>`);
+  }catch(e){ el.innerHTML = `<p class="help-text">Erreur classement : ${e.message}</p>`; }
+}
+
+// Relance une nouvelle partie dans le même salon, avec les mêmes couleurs
+// (mêmes joueurs/bots), sans quitter le salon ni recharger la page.
+async function rematchOnlineGame(){
+  if(!online || !online.isHost || !state) return;
+  const seats = Object.assign({}, state.seats);
+  const diceModeSel = document.getElementById("rematchDiceMode");
+  const diceMode = diceModeSel ? parseInt(diceModeSel.value,10) : state.diceMode;
+  state = newGame(seats, diceMode);
+  closeModal();
+  document.getElementById("gamePanel").style.display="block";
+  document.getElementById("stickyTurnBar").style.display="flex";
+  renderAll();
+  await createGameRowInSupabase(seats, diceMode);
+  broadcastState();
+  maybeBotTurn();
 }
 
 async function logMoveToSupabase(color, die, move, recentLogs){
@@ -2116,6 +2436,14 @@ async function updateGameResultInSupabase(winnerColor){
       winner: winnerColor, ended_at: new Date().toISOString()
     }).eq("id", state.gameId);
   }catch(e){ console.warn("games update failed", e); }
+  if(online && online.poolId){
+    try{
+      const entry = Object.entries(online.poolMemberColors||{}).find(([uid,c])=>c===winnerColor);
+      const winnerId = entry ? entry[0] : null;
+      await supabaseClient.from("tournament_pools").update({winner_id: winnerId, status:"done"}).eq("id", online.poolId);
+      if(activeTournament) await loadTournamentBracket(activeTournament.id);
+    }catch(e){ console.warn("tournament_pools update failed", e); }
+  }
 }
 
 document.getElementById("helpBtn").addEventListener("click", ()=>{
@@ -2806,12 +3134,33 @@ function showWinner(){
        <b>${COLOR_LABEL[c]}</b>${c===state.winner?" — Vainqueur !":""}
      </div>`
   ).join("");
+  const replayHtml = online
+    ? (online.isHost
+        ? `<div class="row" style="margin-bottom:10px;">
+            <label>Mode de dé</label>
+            <select id="rematchDiceMode">
+              <option value="1">1 dé</option>
+              <option value="2">2 dés</option>
+            </select>
+          </div>
+          <button class="primary" id="rematchBtn" style="width:100%;">🔁 Rejouer avec le même salon</button>`
+        : `<p class="help-text">En attente que l'organisateur relance la partie…</p>`)
+    : `<button class="primary" onclick="location.reload()">Rejouer</button>`;
   document.getElementById("modalRoot").innerHTML = `
-    <div class="winner-banner"><div class="winner-box">
+    <div class="winner-banner"><div class="winner-box panel-scenic scene-victoire">
+<span class="sparkle" style="top:10%;left:12%;width:6px;height:6px;animation-delay:0s;"></span><span class="sparkle" style="top:22%;left:80%;width:4px;height:4px;animation-delay:1.1s;"></span><span class="sparkle" style="top:68%;left:18%;width:5px;height:5px;animation-delay:2s;"></span><span class="sparkle" style="top:78%;left:86%;width:4px;height:4px;animation-delay:0.6s;"></span>
       <h2>🏆 ${COLOR_LABEL[state.winner]} remporte la partie !</h2>
       <div style="margin:10px 0 16px;">${rankingHtml}</div>
-      <button class="primary" onclick="location.reload()">Rejouer</button>
+      ${online ? '<div id="winnerRoomStats" style="margin-bottom:14px;"></div>' : ""}
+      ${replayHtml}
     </div></div>`;
+  if(online){
+    const rematchBtn = document.getElementById("rematchBtn");
+    if(rematchBtn) rematchBtn.addEventListener("click", rematchOnlineGame);
+    const rematchDiceSel = document.getElementById("rematchDiceMode");
+    if(rematchDiceSel) rematchDiceSel.value = String(state.diceMode);
+    renderRoomLeaderboard(online.roomCode, "winnerRoomStats");
+  }
   playApplauseSound();
   startVictoryCelebration(6000);
 }
@@ -3282,7 +3631,12 @@ async function loadActiveTournament(){
     const { data, error } = await supabaseClient.from("tournaments")
       .select("*").lte("starts_at", nowIso).gte("ends_at", nowIso)
       .order("starts_at", {ascending:false}).limit(1);
-    if(error || !data || !data.length){ panel.style.display="none"; activeTournament=null; return; }
+    if(error || !data || !data.length){
+      panel.style.display="none"; activeTournament=null;
+      const joinRow = document.getElementById("tournamentJoinRow"); if(joinRow) joinRow.innerHTML="";
+      const bracketEl = document.getElementById("tournamentBracket"); if(bracketEl) bracketEl.innerHTML="";
+      return;
+    }
     activeTournament = data[0];
     panel.style.display="block";
     const endsDate = new Date(activeTournament.ends_at);
@@ -3291,6 +3645,8 @@ async function loadActiveTournament(){
       (activeTournament.prize_description? `Récompense : ${activeTournament.prize_description}<br>`:"") +
       `Se termine le ${endsDate.toLocaleDateString('fr-FR')}`;
     await loadTournamentLeaderboard(activeTournament.id);
+    await refreshTournamentJoinUi();
+    await loadTournamentBracket(activeTournament.id);
   }catch(e){ panel.style.display="none"; }
 }
 
@@ -3320,6 +3676,214 @@ async function loadTournamentLeaderboard(tournamentId){
       "</table>";
   }catch(e){ el2.innerHTML=""; }
 }
+
+// ---- Poules de tournoi : inscription, répartition, salons, schéma ----
+async function refreshTournamentJoinUi(){
+  const row = document.getElementById("tournamentJoinRow");
+  if(!row) return;
+  if(!activeTournament || !currentUser || isGuest){ row.innerHTML=""; return; }
+  try{
+    const { data, error } = await supabaseClient.from("tournament_participants")
+      .select("user_id").eq("tournament_id", activeTournament.id).eq("user_id", currentUser.id).maybeSingle();
+    if(error) throw error;
+    if(data){
+      row.innerHTML = `<p class="help-text" style="color:var(--gold);">✅ Tu participes à ce tournoi.</p>`;
+    } else {
+      row.innerHTML = `
+        <button class="primary" id="tournamentJoinBtn" style="flex:1;">✅ Participer</button>
+        <button class="ghost" id="tournamentSpectateBtn" style="flex:1;">👀 Supporter</button>`;
+      document.getElementById("tournamentJoinBtn").addEventListener("click", async ()=>{
+        try{
+          await supabaseClient.from("tournament_participants").insert({tournament_id:activeTournament.id, user_id:currentUser.id});
+          await refreshTournamentJoinUi();
+        }catch(e){ alert("Échec de l'inscription : "+e.message); }
+      });
+      document.getElementById("tournamentSpectateBtn").addEventListener("click", ()=>{
+        row.innerHTML = `<p class="help-text">👀 Tu suis ce tournoi en tant que supporter.</p>`;
+      });
+    }
+  }catch(e){ row.innerHTML = ""; }
+}
+function shuffleArray(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+// Répartit des ids en groupes de 2 à 4, aussi équilibrés que possible.
+function splitIntoPools(ids){
+  const n = ids.length;
+  if(n<2) return [];
+  let numPools = Math.max(1, Math.ceil(n/4));
+  while(numPools>1 && Math.floor(n/numPools)<2) numPools--;
+  const shuffled = shuffleArray(ids);
+  const pools = Array.from({length:numPools}, ()=>[]);
+  shuffled.forEach((id,i)=> pools[i%numPools].push(id));
+  return pools;
+}
+// Calcule les horaires automatiques des N poules d'un même tour :
+// étalées toutes les STAGGER_MIN minutes à partir du prochain
+// créneau de START_HOUR heures (heure de Dakar = UTC, pas de DST).
+function nextPoolScheduleTimes(n){
+  const START_HOUR = 20;
+  const STAGGER_MIN = 30;
+  const now = new Date();
+  const base = new Date(now);
+  base.setUTCHours(START_HOUR, 0, 0, 0);
+  if(base <= now) base.setUTCDate(base.getUTCDate()+1);
+  const times = [];
+  for(let i=0;i<n;i++) times.push(new Date(base.getTime() + i*STAGGER_MIN*60000).toISOString());
+  return times;
+}
+async function createTournamentPools(){
+  if(!activeTournament){ alert("Aucun tournoi actif."); return; }
+  try{
+    const { data: existingPools, error: e0 } = await supabaseClient.from("tournament_pools")
+      .select("round").eq("tournament_id", activeTournament.id).order("round", {ascending:false}).limit(1);
+    if(e0) throw e0;
+    const lastRound = existingPools && existingPools.length ? existingPools[0].round : 0;
+    let eligibleIds;
+    if(lastRound===0){
+      const { data: participants, error: e1 } = await supabaseClient.from("tournament_participants")
+        .select("user_id").eq("tournament_id", activeTournament.id);
+      if(e1) throw e1;
+      eligibleIds = (participants||[]).map(p=>p.user_id);
+    } else {
+      const { data: prevPools, error: e2 } = await supabaseClient.from("tournament_pools")
+        .select("winner_id,status").eq("tournament_id", activeTournament.id).eq("round", lastRound);
+      if(e2) throw e2;
+      if(!prevPools || prevPools.some(p=>p.status!=="done")){
+        alert("Toutes les poules du tour "+lastRound+" doivent être terminées avant de créer le tour suivant.");
+        return;
+      }
+      eligibleIds = prevPools.map(p=>p.winner_id).filter(Boolean);
+    }
+    if(eligibleIds.length<2){
+      alert(eligibleIds.length===1
+        ? "Il ne reste qu'un seul joueur en course : c'est déjà le champion, pas besoin d'un nouveau tour."
+        : "Pas assez de participants inscrits pour créer des poules (2 minimum).");
+      return;
+    }
+    const groups = splitIntoPools(eligibleIds);
+    const scheduleTimes = nextPoolScheduleTimes(groups.length);
+    const rows = groups.map((group,gi)=>{
+      const colors = {};
+      group.forEach((uid,i)=> colors[uid]=COLORS[i]);
+      return {
+        tournament_id: activeTournament.id,
+        round: lastRound+1,
+        room_code: generateRoomCode(),
+        member_ids: group,
+        member_colors: colors,
+        status: "pending",
+        scheduled_at: scheduleTimes[gi]
+      };
+    });
+    const { data: insertedPools, error } = await supabaseClient.from("tournament_pools").insert(rows).select("id");
+    if(error) throw error;
+    await logAdminAction("create_tournament_pools", {tournamentId:activeTournament.id, round:lastRound+1, pools:groups.length});
+    if(insertedPools && insertedPools.length){
+      supabaseClient.functions.invoke("send-pool-emails", {body:{type:"confirmation", poolIds: insertedPools.map(p=>p.id)}})
+        .catch(e=>console.warn("send-pool-emails (confirmation) a échoué", e));
+    }
+    await loadTournamentBracket(activeTournament.id);
+    alert(groups.length+" poule(s) créée(s) pour le tour "+(lastRound+1)+". Email de confirmation envoyé aux joueurs.");
+  }catch(e){ alert("Échec de création des poules : "+e.message); }
+}
+async function joinPoolRoom(pool){
+  if(!currentUser) return;
+  const myColor = (pool.member_colors||{})[currentUser.id];
+  if(!myColor){ alert("Tu ne fais pas partie de cette poule."); return; }
+  online = { roomCode: pool.room_code, isHost: (pool.member_ids||[])[0]===currentUser.id, mySeats:new Set([myColor]), seatsMeta:{} };
+  online.seatsMeta[myColor] = {name: myDisplayLabel()};
+  online.poolId = pool.id;
+  online.poolMemberColors = pool.member_colors;
+  online.channel = subscribeOnlineChannel(pool.room_code);
+  document.getElementById("modeSwitchPanel").style.display="none";
+  document.getElementById("setupPanel").style.display="none";
+  document.getElementById("sponsorStatusPanel").style.display="none";
+  document.getElementById("tournamentPanel").style.display="none";
+  document.getElementById("onlinePanel").style.display="block";
+  document.getElementById("onlineSetup").style.display="none";
+  document.getElementById("onlineRoom").style.display="block";
+  document.getElementById("roomCodeDisplay").textContent = pool.room_code;
+  document.getElementById("onlineStartBtn").style.display = online.isHost ? "block" : "none";
+  renderSeatClaims();
+  broadcastSeats();
+}
+function joinPoolRoomById(poolId){
+  const el = document.getElementById("tournamentBracket");
+  if(!el || !el.dataset.pools) return;
+  try{
+    const pools = JSON.parse(el.dataset.pools);
+    const pool = pools.find(p=>p.id===poolId);
+    if(pool) joinPoolRoom(pool);
+  }catch(e){ console.warn("joinPoolRoomById failed", e); }
+}
+async function loadTournamentBracket(tournamentId){
+  const el = document.getElementById("tournamentBracket");
+  if(!el) return;
+  const panelEl = document.getElementById("tournamentPanel");
+  if(!tournamentId || !supabaseReady){ el.innerHTML=""; return; }
+  try{
+    const { data: pools, error } = await supabaseClient.from("tournament_pools")
+      .select("*").eq("tournament_id", tournamentId).order("round").order("created_at");
+    if(error) throw error;
+    if(!pools || !pools.length){
+      if(panelEl){ panelEl.classList.remove("scene-tournoi-bracket"); panelEl.classList.add("scene-tournoi-info"); }
+      el.innerHTML = `<p class="help-text">Les poules n'ont pas encore été créées pour ce tournoi.</p>`;
+      return;
+    }
+    if(panelEl){ panelEl.classList.remove("scene-tournoi-info"); panelEl.classList.add("scene-tournoi-bracket"); }
+    const allIds = Array.from(new Set(pools.flatMap(p=> (p.member_ids||[]).concat(p.winner_id?[p.winner_id]:[]))));
+    const { data: profiles } = await supabaseClient.from("profiles").select("id,display_name").in("id", allIds);
+    const nameOf = {}; (profiles||[]).forEach(p=> nameOf[p.id]=p.display_name||"Joueur");
+    const rounds = {};
+    pools.forEach(p=> { (rounds[p.round]=rounds[p.round]||[]).push(p); });
+    const roundNums = Object.keys(rounds).map(Number).sort((a,b)=>a-b);
+    const maxRound = roundNums[roundNums.length-1];
+    let html = `<p class="help-text" style="font-weight:700;color:var(--gold);margin-bottom:6px;">📋 Schéma du tournoi</p>`;
+    html += `<div style="display:flex;gap:14px;overflow-x:auto;padding:6px 2px;">`;
+    roundNums.forEach(r=>{
+      const isFinal = r===maxRound && rounds[r].length===1;
+      html += `<div style="min-width:170px;flex-shrink:0;">
+        <p class="help-text" style="font-weight:700;">${isFinal?"🏆 Finale":"Tour "+r}</p>`;
+      rounds[r].forEach(p=>{
+        const iAmIn = currentUser && (p.member_ids||[]).includes(currentUser.id);
+        const whenStr = p.scheduled_at ? new Date(p.scheduled_at).toLocaleString("fr-FR", {timeZone:"Africa/Dakar", weekday:"short", day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"}) : null;
+        html += `<div style="border:1px solid rgba(217,164,65,0.3);border-radius:8px;padding:6px 8px;margin-bottom:8px;font-size:0.8rem;">`;
+        if(whenStr){ html += `<div style="color:var(--gold);font-size:0.72rem;margin-bottom:4px;">🕒 ${whenStr}</div>`; }
+        (p.member_ids||[]).forEach(uid=>{
+          const won = p.winner_id===uid;
+          html += `<div style="${won?'font-weight:700;color:var(--gold);':''}">${won?"👑 ":""}${nameOf[uid]||"Joueur"}</div>`;
+        });
+        if(p.status!=="done"){
+          html += `<div style="opacity:0.7;margin-top:4px;">En cours…</div>`;
+          if(iAmIn){
+            html += `<button class="ghost" style="width:100%;margin-top:6px;font-size:0.75rem;padding:4px;" onclick="joinPoolRoomById('${p.id}')">🎮 Rejoindre ma poule</button>`;
+          }
+        }
+        html += `</div>`;
+      });
+      html += `</div>`;
+    });
+    html += `</div>`;
+    const finalPool = rounds[maxRound] && rounds[maxRound].length===1 ? rounds[maxRound][0] : null;
+    if(finalPool && finalPool.status==="done" && finalPool.winner_id){
+      html = `<p class="help-text" style="font-weight:700;color:var(--gold);font-size:1rem;">🏆 Champion du tournoi : ${nameOf[finalPool.winner_id]||"Joueur"} !</p>` + html;
+    }
+    el.innerHTML = html;
+    el.dataset.pools = JSON.stringify(pools);
+  }catch(e){ el.innerHTML = `<p class="help-text">Erreur d'affichage du schéma : ${e.message}</p>`; }
+}
+setInterval(()=>{
+  const panel = document.getElementById("tournamentPanel");
+  if(activeTournament && panel && panel.style.display!=="none"){
+    loadTournamentBracket(activeTournament.id);
+  }
+}, 15000);
 
 // kick off bot play right after a human-triggered roll if current is bot (edge safety)
 const origRoll = rollDice;
