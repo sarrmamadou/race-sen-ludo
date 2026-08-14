@@ -3087,7 +3087,14 @@ function renderTurnBanner(){
   }
   const stickyEl = document.getElementById("stickyTurnIndicator");
   if(stickyEl){
-    stickyEl.innerHTML = `<span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${COLOR_HEX[c]};vertical-align:middle;margin-right:8px;"></span>Tour de ${COLOR_LABEL[c]}${state.seats[c]==='bot'?' (Ordinateur)':''}`;
+    stickyEl.innerHTML = `Tour de ${COLOR_LABEL[c]}${state.seats[c]==='bot'?' (Ordinateur)':''}`;
+  }
+  const rollBtnEl = document.getElementById("rollBtn");
+  if(rollBtnEl){
+    rollBtnEl.style.background = COLOR_HEX[c];
+    rollBtnEl.style.borderColor = COLOR_HEX[c];
+    rollBtnEl.style.color = "#fff";
+    rollBtnEl.style.textShadow = "0 1px 2px rgba(0,0,0,0.55)";
   }
   document.getElementById("turnHint").textContent =
     online && !isMyTurnOnline() ? "En attente du joueur qui contrôle cette couleur…" :
@@ -3533,19 +3540,44 @@ function showMoveChoiceArrows(p, moves, proceed){
   const svg = document.getElementById("board");
   const fromPos = pawnScreenPos(p);
   const fromCx = fromPos.x + CELL/2, fromCy = fromPos.y + CELL/2;
-
-  moves.forEach(m=>{
+  // Couleur distincte par type d'action, pour les différencier au premier
+  // coup d'œil (en plus de l'espacement ci-dessous) : continuer = or
+  // (comme avant), envahir = accent chaud, refuser = gris neutre, arriver
+  // à la maison = vert.
+  const arrowFill = (m)=>{
+    if(m.type==="invadeEnter") return "#e07a5f";
+    if(m.type==="declineInvade") return "#8a8f98";
+    if(m.type==="continueLoop" || m.type==="advance") return "var(--gold)";
+    return "#4c9a5a";
+  };
+  // Calcule d'abord l'angle réel de chaque option directionnelle, puis
+  // impose un écart angulaire minimum entre elles : évite que deux flèches
+  // pointant dans des directions proches se retrouvent quasiment
+  // superposées et donc confuses.
+  const MIN_ANGLE_GAP = 34;
+  const withAngle = moves.map(m=>{
     const nsp = nextStepPos(p, m);
+    if(!nsp) return { m, angleDeg:null };
+    const ncx = nsp.x + CELL/2, ncy = nsp.y + CELL/2;
+    return { m, angleDeg: Math.atan2(ncy-fromCy, ncx-fromCx) * 180/Math.PI };
+  });
+  const directional = withAngle.filter(it=>it.angleDeg!==null).sort((a,b)=>a.angleDeg-b.angleDeg);
+  for(let i=1;i<directional.length;i++){
+    const gap = directional[i].angleDeg - directional[i-1].angleDeg;
+    if(gap < MIN_ANGLE_GAP){
+      directional[i].angleDeg = directional[i-1].angleDeg + MIN_ANGLE_GAP;
+    }
+  }
+  withAngle.forEach((it, idx)=>{
+    const m = it.m;
     const g = el("g",{style:"cursor:pointer;"});
-
-    if(nsp){
-      const ncx = nsp.x + CELL/2, ncy = nsp.y + CELL/2;
-      const dx = ncx - fromCx, dy = ncy - fromCy;
-      const angleDeg = Math.atan2(dy, dx) * 180/Math.PI;
-      const dist = 30;
+    const fill = arrowFill(m);
+    if(it.angleDeg!==null){
+      const angleDeg = it.angleDeg;
+      const dist = 30 + (idx%2)*12; // distance légèrement décalée : marge de sécurité en plus contre tout chevauchement résiduel
       const px = fromCx + Math.cos(angleDeg*Math.PI/180)*dist;
       const py = fromCy + Math.sin(angleDeg*Math.PI/180)*dist;
-      const halo = el("circle",{cx:px,cy:py,r:15,fill:"var(--gold)",stroke:"#fff","stroke-width":2.2,class:"choice-arrow-halo"});
+      const halo = el("circle",{cx:px,cy:py,r:15,fill:fill,stroke:"#fff","stroke-width":2.2,class:"choice-arrow-halo"});
       // triangle pointant par défaut vers +X, puis tourné vers la vraie direction
       const arrow = el("polygon",{
         points:"8,0 -6,-6.5 -6,6.5",
@@ -3557,13 +3589,12 @@ function showMoveChoiceArrows(p, moves, proceed){
     } else {
       const pos = moveTargetPos(p, m);
       const cx = pos.x + CELL/2, cy = pos.y + CELL/2;
-      const halo = el("circle",{cx,cy,r:17,fill:"var(--gold)",stroke:"#fff","stroke-width":2.5,class:"choice-arrow-halo"});
+      const halo = el("circle",{cx,cy,r:17,fill:fill,stroke:"#fff","stroke-width":2.5,class:"choice-arrow-halo"});
       const label = el("text",{x:cx,y:cy+6,"text-anchor":"middle","font-size":18,"font-weight":"bold",fill:"#231705"});
       label.textContent = m.type==="declineInvade" ? "🚫" : "🏁";
       g.appendChild(halo);
       g.appendChild(label);
     }
-
     g.addEventListener("click", (e)=>{
       e.stopPropagation();
       clearChoiceArrows();
