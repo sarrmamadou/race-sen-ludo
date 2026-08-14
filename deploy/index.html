@@ -163,7 +163,25 @@
   .pip-die.pickable{cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,0.35), 0 0 0 3px #fff;}
   .pip-die .pip{width:9px;height:9px;border-radius:50%;background:var(--ink);margin:auto;opacity:0;}
   .pip-die .pip.on{opacity:1;}
-  .board-wrap{display:flex;flex-direction:column;align-items:center;overflow:visible;}
+  .board-wrap{display:flex;flex-direction:column;align-items:center;overflow:visible;position:relative;}
+  .board-wrap::before{
+    content:"";
+    position:absolute;
+    inset:-10px;
+    border-radius:22px;
+    padding:3px;
+    background:conic-gradient(from 0deg, var(--gold), #fff6d8, var(--wax-line), var(--gold), #fff6d8, var(--wax-line), var(--gold));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor;
+    mask-composite:exclude;
+    animation:boardFrameSpin 6s linear infinite;
+    pointer-events:none;
+    z-index:0;
+  }
+  @keyframes boardFrameSpin{
+    from{ transform:rotate(0deg); }
+    to{ transform:rotate(360deg); }
+  }
   .sticky-turn-bar{
     position:sticky;top:0;z-index:60;
     display:flex;align-items:center;justify-content:center;gap:16px;
@@ -178,8 +196,9 @@
   .board-zoom-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;}
   .board-zoom-row button{padding:4px 12px;font-size:0.95rem;}
   #board{background:var(--sand);border-radius:16px;border:6px solid var(--wax-line);
-    box-shadow:0 12px 30px rgba(0,0,0,0.45);max-width:100%;height:auto;
-    transition:width 0.15s ease;}
+    box-shadow:0 14px 34px rgba(0,0,0,0.5), 0 0 26px 3px rgba(217,164,65,0.4), inset 0 0 0 2px rgba(255,255,255,0.15);
+    max-width:100%;height:auto;position:relative;z-index:1;
+    transition:width 0.15s ease, box-shadow 0.4s ease;}
   .pawn-choice-cell{cursor:pointer;}
   .log{max-height:170px;overflow-y:auto;font-size:0.78rem;line-height:1.5;opacity:0.9;}
   .log div{border-bottom:1px dotted rgba(217,164,65,0.25);padding:2px 0;}
@@ -193,6 +212,23 @@
     0%{ transform:scale(1); opacity:0.85; }
     50%{ transform:scale(1.22); opacity:1; }
     100%{ transform:scale(1); opacity:0.85; }
+  }
+  #rollBtn{
+    transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease, transform 0.15s ease, filter 0.15s ease;
+  }
+  #rollBtn:not(:disabled):hover{
+    transform: translateY(-2px) scale(1.02);
+    filter: brightness(1.08);
+  }
+  #rollBtn:not(:disabled):active{
+    transform: translateY(0) scale(0.97);
+  }
+  @keyframes diceTurnGlow{
+    0%,100%{ box-shadow: 0 0 14px 2px var(--dice-glow, transparent), inset 0 1px 0 rgba(255,255,255,0.2); }
+    50%{ box-shadow: 0 0 26px 6px var(--dice-glow, transparent), inset 0 1px 0 rgba(255,255,255,0.3); }
+  }
+  #rollBtn.dice-glow-anim{
+    animation: diceTurnGlow 1.8s ease-in-out infinite;
   }
   .choice-box{
     background:var(--bg-deep-2);border:2px solid var(--gold);border-radius:14px;
@@ -497,6 +533,10 @@
         <button class="ghost" id="boardZoomInBtn" title="Agrandir le plateau">➕</button>
       </div>
       <div class="board-wrap">
+        <span class="sparkle" style="top:6%;left:5%;width:8px;height:8px;animation-delay:0s;"></span>
+        <span class="sparkle" style="top:12%;right:7%;width:6px;height:6px;animation-delay:1.3s;"></span>
+        <span class="sparkle" style="bottom:22%;left:9%;width:7px;height:7px;animation-delay:2.1s;"></span>
+        <span class="sparkle" style="bottom:14%;right:12%;width:5px;height:5px;animation-delay:0.7s;"></span>
         <svg id="board" viewBox="0 0 600 600" width="600" height="600"></svg>
         <div class="dice-tray" id="diceZone"></div>
       </div>
@@ -3074,6 +3114,19 @@ function renderAll(){
   if(state.winner) showWinner();
 }
 
+function hexToRgba(hex, alpha){
+  const h = hex.replace("#","");
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function shadeHexColor(hex, percent){
+  const h = hex.replace("#","");
+  let r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  r = Math.min(255, Math.max(0, Math.round(r + (percent/100)*255)));
+  g = Math.min(255, Math.max(0, Math.round(g + (percent/100)*255)));
+  b = Math.min(255, Math.max(0, Math.round(b + (percent/100)*255)));
+  return `rgb(${r},${g},${b})`;
+}
 function renderTurnBanner(){
   const el = document.getElementById("turnBanner");
   if(!state){ el.innerHTML=""; return; }
@@ -3091,10 +3144,13 @@ function renderTurnBanner(){
   }
   const rollBtnEl = document.getElementById("rollBtn");
   if(rollBtnEl){
-    rollBtnEl.style.background = COLOR_HEX[c];
-    rollBtnEl.style.borderColor = COLOR_HEX[c];
+    const hex = COLOR_HEX[c];
+    rollBtnEl.style.background = `linear-gradient(145deg, ${hex}, ${shadeHexColor(hex, -22)})`;
+    rollBtnEl.style.borderColor = shadeHexColor(hex, 18);
     rollBtnEl.style.color = "#fff";
-    rollBtnEl.style.textShadow = "0 1px 2px rgba(0,0,0,0.55)";
+    rollBtnEl.style.textShadow = "0 1px 3px rgba(0,0,0,0.6)";
+    rollBtnEl.style.setProperty("--dice-glow", hexToRgba(hex, 0.55));
+    rollBtnEl.classList.add("dice-glow-anim");
   }
   document.getElementById("turnHint").textContent =
     online && !isMyTurnOnline() ? "En attente du joueur qui contrôle cette couleur…" :
