@@ -212,6 +212,20 @@
   #rollBtn.dice-glow-anim{
     animation: diceTurnGlow 1.8s ease-in-out infinite;
   }
+  .dice-hint-btn{
+    display:inline-block;
+    transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease, transform 0.15s ease, filter 0.15s ease;
+  }
+  .dice-hint-btn:hover{
+    transform: translateY(-2px) scale(1.02);
+    filter: brightness(1.08);
+  }
+  .dice-hint-btn:active{
+    transform: translateY(0) scale(0.97);
+  }
+  .dice-hint-btn.dice-glow-anim{
+    animation: diceTurnGlow 1.8s ease-in-out infinite;
+  }
   .choice-box{
     background:var(--bg-deep-2);border:2px solid var(--gold);border-radius:14px;
     padding:20px;width:min(92vw,440px);text-align:center;
@@ -3167,8 +3181,14 @@ function renderDice(){
   if(!state || state.dice.length===0){
     if(state && !state.winner && state.phase==="idle" && state.seats[currentColor()]!=="bot" && (!online || isMyTurnOnline())){
       const hint = document.createElement("div");
-      hint.className = "help-text";
-      hint.style.cssText = "cursor:pointer;padding:6px 10px;opacity:0.85;";
+      hint.className = "help-text dice-hint-btn dice-glow-anim";
+      const hintColor = COLOR_HEX[currentColor()];
+      hint.style.cssText = "cursor:pointer;padding:8px 14px;border-radius:12px;font-weight:600;";
+      hint.style.background = `linear-gradient(145deg, ${hintColor}, ${shadeHexColor(hintColor, -22)})`;
+      hint.style.border = `2px solid ${shadeHexColor(hintColor, 18)}`;
+      hint.style.color = "#fff";
+      hint.style.textShadow = "0 1px 3px rgba(0,0,0,0.6)";
+      hint.style.setProperty("--dice-glow", hexToRgba(hintColor, 0.5));
       hint.textContent = "🎲 Cliquez ici pour lancer le(s) dé(s)";
       hint.addEventListener("click", rollDice);
       zone.appendChild(hint);
