@@ -3612,7 +3612,7 @@ function showMoveChoiceArrows(p, moves, proceed){
   // impose un écart angulaire minimum entre elles : évite que deux flèches
   // pointant dans des directions proches se retrouvent quasiment
   // superposées et donc confuses.
-  const MIN_ANGLE_GAP = 34;
+  const MIN_ANGLE_GAP = 42;
   const withAngle = moves.map(m=>{
     const nsp = nextStepPos(p, m);
     if(!nsp) return { m, angleDeg:null };
@@ -3632,16 +3632,26 @@ function showMoveChoiceArrows(p, moves, proceed){
     const fill = arrowFill(m);
     if(it.angleDeg!==null){
       const angleDeg = it.angleDeg;
-      const dist = 30 + (idx%2)*12; // distance légèrement décalée : marge de sécurité en plus contre tout chevauchement résiduel
-      const px = fromCx + Math.cos(angleDeg*Math.PI/180)*dist;
-      const py = fromCy + Math.sin(angleDeg*Math.PI/180)*dist;
-      const halo = el("circle",{cx:px,cy:py,r:15,fill:fill,stroke:"#fff","stroke-width":2.2,class:"choice-arrow-halo"});
+      const rad = angleDeg*Math.PI/180;
+      // Flèches nettement plus longues (distance quasi doublée) + une
+      // "hampe" (trait) reliant le pion à la pointe : la direction reste
+      // lisible même quand deux options sont proches en angle.
+      const dist = 46 + (idx%2)*16;
+      const px = fromCx + Math.cos(rad)*dist;
+      const py = fromCy + Math.sin(rad)*dist;
+      const shaftX1 = fromCx + Math.cos(rad)*16;
+      const shaftY1 = fromCy + Math.sin(rad)*16;
+      const shaftX2 = fromCx + Math.cos(rad)*(dist-14);
+      const shaftY2 = fromCy + Math.sin(rad)*(dist-14);
+      const shaft = el("line",{x1:shaftX1,y1:shaftY1,x2:shaftX2,y2:shaftY2,stroke:fill,"stroke-width":4,"stroke-linecap":"round",opacity:0.85});
+      const halo = el("circle",{cx:px,cy:py,r:16,fill:fill,stroke:"#fff","stroke-width":2.2,class:"choice-arrow-halo"});
       // triangle pointant par défaut vers +X, puis tourné vers la vraie direction
       const arrow = el("polygon",{
-        points:"8,0 -6,-6.5 -6,6.5",
+        points:"9,0 -7,-7 -7,7",
         fill:"#231705",
         transform:`translate(${px},${py}) rotate(${angleDeg})`
       });
+      g.appendChild(shaft);
       g.appendChild(halo);
       g.appendChild(arrow);
     } else {
