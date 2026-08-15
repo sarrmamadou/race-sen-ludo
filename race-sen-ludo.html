@@ -2963,6 +2963,21 @@ function tryAutoPlaySinglePawn(values){
     if(capturingOptions.length>1) return false; // plusieurs captures possibles : laisser le joueur choisir manuellement
   }
 
+  // Priorité similaire pour l'entrée dans la colonne d'arrivée : si l'une des
+  // deux valeurs prise seule permet d'entrer (ou de finir la course), on ne
+  // décide pas à sa place en imposant la somme des deux dés (qui pourrait
+  // dépasser et forcer un tour de plus malgré lui) — on laisse la main
+  // manuelle pour qu'il choisisse lui-même entre entrer maintenant (avec un
+  // seul dé, l'autre étant alors sacrifié) ou continuer le tour du plateau.
+  if(values.length===2){
+    for(const dv of values){
+      const movesSingle = possibleMovesForPawn(pawn, dv);
+      if(movesSingle.some(m => m.type==="finish" || (m.type==="advance" && m.newProgress>51))){
+        return false;
+      }
+    }
+  }
+
   const total = values.reduce((a,b)=>a+b,0);
   const moves = possibleMovesForPawn(pawn, total);
   if(moves.length!==1) return false; // coup ambigu ou invalide -> laisser la main manuelle habituelle
