@@ -1028,9 +1028,14 @@ function checkWin(){
         state.winner = c;
         updateGameResultInSupabase(c);
       }
+      playApplauseSound(); // applaudissements pour chaque joueur qui termine sa course
     }
   });
-  if(!state.gameOver && state.finishOrder.length >= state.active.length){
+  // Pas besoin d'attendre que TOUT LE MONDE finisse : dès qu'il ne reste plus
+  // qu'un seul joueur actif encore en course, sa place (dernier) est déjà
+  // connue — la partie s'arrête là et affiche le classement complet.
+  const gameOverThreshold = Math.max(1, state.active.length-1);
+  if(!state.gameOver && state.finishOrder.length >= gameOverThreshold){
     state.gameOver = true;
   }
 }
