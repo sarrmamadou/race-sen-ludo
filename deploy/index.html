@@ -63,11 +63,14 @@
   header.top .tag{font-size:0.78rem;opacity:0.75;letter-spacing:1.5px;text-transform:uppercase;}
   .layout{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:22px;}
   .layout.layout-centered{grid-template-columns:minmax(280px,660px);justify-content:center;}
-  .active-yard-glow{ animation: yardPulse 1.4s ease-in-out infinite; }
+  .active-yard-glow{
+    animation: yardPulse 1.2s ease-in-out infinite;
+    filter: drop-shadow(0 0 7px rgba(255,255,255,0.85));
+  }
   @keyframes yardPulse{
-    0%{ opacity:0.4; stroke-width:4; }
-    50%{ opacity:1; stroke-width:7; }
-    100%{ opacity:0.4; stroke-width:4; }
+    0%{ opacity:0.65; stroke-width:6; }
+    50%{ opacity:1; stroke-width:11; }
+    100%{ opacity:0.65; stroke-width:6; }
   }
   @media (max-width:900px){
     .layout{grid-template-columns:1fr;gap:14px;}
@@ -629,6 +632,8 @@ function newGame(seats, diceMode){
     sixStreak: 0, // consecutive sixes within this player's turn chain (used for barrage passage)
     bonusChainCount: 0,
     sixesRolledThisChain: 0, // total de faces "6" obtenues ce tour (jamais décrémenté) — règle des 6 six
+    finishOrder: [], // couleurs dans l'ordre où elles ont fini, pour le classement final
+    gameOver: false, // true seulement quand TOUS les joueurs actifs ont fini (classement complet)
     phase: "idle", // idle | rolled | choosing
     pendingChoice: null,
     winner: null,
@@ -846,13 +851,21 @@ function uniqueDice(){ return [...new Set(state.dice)]; }
 // Anime un pion case par case avant que le coup ne soit réellement appliqué,
 // pour qu'il ne semble jamais "sauter" par-dessus des cases intermédiaires.
 // Purement visuel : l'état réel n'est modifié qu'après l'animation, via onDone().
-function animatePawnHop(p, moveType, newProgress, onDone){
-  if(moveType!=="advance" || p.state!=="path" || newProgress===undefined){ onDone(); return; }
+function animatePawnHop(p, move, onDone){
+  const moveType = move.type;
+  const newProgress = move.newProgress;
   const steps = [];
-  const commonEnd = Math.min(newProgress, 51);
-  for(let pr = p.progress+1; pr <= commonEnd; pr++) steps.push({state:"path", progress:pr});
-  if(newProgress>51){
-    for(let d=1; d<=newProgress-51; d++) steps.push({state:"homecol", progress:d});
+  if(moveType==="advance" && p.state==="path" && newProgress!==undefined){
+    const commonEnd = Math.min(newProgress, 51);
+    for(let pr = p.progress+1; pr <= commonEnd; pr++) steps.push({state:"path", progress:pr});
+    if(newProgress>51){
+      for(let d=1; d<=newProgress-51; d++) steps.push({state:"homecol", progress:d});
+    }
+  } else if(moveType==="continueLoop" && p.state==="path" && newProgress!==undefined){
+    // Continue sur la piste commune sans entrer dans la colonne d'arrivée :
+    // même principe pas-à-pas que "advance", mais on reste toujours en
+    // state "path" (globalIndex() gère déjà le bouclage au-delà de la case 51).
+    for(let pr = p.progress+1; pr <= newProgress; pr++) steps.push({state:"path", progress:pr});
   }
   if(!steps.length){ onDone(); return; }
   const originalProgress = p.progress, originalState = p.state;
@@ -973,21 +986,30 @@ function colorProgressScore(c){
 }
 function computeFinalRanking(){
   const active = state.active;
+  const order = state.finishOrder || [];
   const ranked = active.slice().sort((a,b)=>{
-    if(a===state.winner) return -1;
-    if(b===state.winner) return 1;
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    if(ia!==-1 && ib!==-1) return ia-ib;
+    if(ia!==-1) return -1;
+    if(ib!==-1) return 1;
     return colorProgressScore(b)-colorProgressScore(a);
   });
   return ranked;
 }
 
 function checkWin(){
-  COLORS.forEach(c=>{
-    if(!state.winner && pawnsOf(c).every(p=>p.state==="finished")){
-      state.winner = c;
-      updateGameResultInSupabase(c);
+  state.active.forEach(c=>{
+    if(!state.finishOrder.includes(c) && pawnsOf(c).every(p=>p.state==="finished")){
+      state.finishOrder.push(c);
+      if(!state.winner){
+        state.winner = c;
+        updateGameResultInSupabase(c);
+      }
     }
   });
+  if(!state.gameOver && state.finishOrder.length >= state.active.length){
+    state.gameOver = true;
+  }
 }
 
 /* =========================================================================
@@ -2935,7 +2957,7 @@ function grantsBonus(values){
 }
 
 function rollDice(){
-  if(!state || state.winner) return;
+  if(!state || state.gameOver) return;
   if(online && !isMyTurnOnline()) return; // pas votre couleur ce tour-ci
   if(state.phase==="rolling") return; // anti double-clic pendant l'animation
   playDiceRollSound(state.diceMode);
@@ -3025,17 +3047,22 @@ function endTurn(){
   state.sixesRolledThisChain = 0;
   state.phase="idle";
   state.dice=[];
-  state.turnIdx = (state.turnIdx+1) % state.turnOrder.length;
+  const n = state.turnOrder.length;
+  for(let i=0;i<n;i++){
+    state.turnIdx = (state.turnIdx+1) % n;
+    const c = state.turnOrder[state.turnIdx];
+    if(!state.finishOrder || !state.finishOrder.includes(c)) break;
+  }
   renderAll();
   broadcastState();
   maybeBotTurn();
 }
 
 function maybeBotTurn(){
-  if(!state || state.winner) return;
+  if(!state || state.gameOver) return;
   if(online && !online.isHost) return; // en ligne : seul l'hôte pilote les joueurs virtuels
   if(state.seats[currentColor()]==="bot" && state.phase==="idle"){
-    setTimeout(()=>{ if(state && !state.winner) rollDice(); }, 700);
+    setTimeout(()=>{ if(state && !state.gameOver) rollDice(); }, 700);
   }
 }
 
@@ -3060,7 +3087,7 @@ function moveWouldCapture(p, move){
 }
 
 function botAutoPlay(){
-  if(!state || state.winner) return;
+  if(!state || state.gameOver) return;
   if(online && !online.isHost) return; // en ligne : seul l'hôte pilote les joueurs virtuels
   if(state.seats[currentColor()]!=="bot") return;
   if(state.dice.length===0) return;
@@ -3078,7 +3105,7 @@ function botAutoPlay(){
   const capturing = candidates.filter(c => moveWouldCapture(c.p, c.move));
   const chosen = capturing.length>0 ? capturing[0] : candidates[0];
   removeOneDie(chosen.die);
-  animatePawnHop(chosen.p, chosen.move.type, chosen.move.newProgress, ()=>{
+  animatePawnHop(chosen.p, chosen.move, ()=>{
     applyMove(chosen.p, chosen.die, chosen.move);
     renderAll();
     broadcastState();
@@ -3107,7 +3134,7 @@ function renderAll(){
   renderDice();
   renderBoard();
   renderLog();
-  if(state.winner) showWinner();
+  if(state.gameOver) showWinner();
 }
 
 function hexToRgba(hex, alpha){
@@ -3179,7 +3206,7 @@ function renderDice(){
   const zone = document.getElementById("diceZone");
   zone.innerHTML="";
   if(!state || state.dice.length===0){
-    if(state && !state.winner && state.phase==="idle" && state.seats[currentColor()]!=="bot" && (!online || isMyTurnOnline())){
+    if(state && !state.gameOver && state.phase==="idle" && state.seats[currentColor()]!=="bot" && (!online || isMyTurnOnline())){
       const hint = document.createElement("div");
       hint.className = "help-text dice-hint-btn dice-glow-anim";
       const hintColor = COLOR_HEX[currentColor()];
@@ -3303,7 +3330,7 @@ function renderBoard(){
     const [r0,c0] = yardBox[c];
     const p = rc(r0,c0);
     svg.appendChild(el("rect",{x:p.x,y:p.y,width:6*CELL,height:6*CELL,fill:COLOR_HEX[c],opacity:0.85,rx:14}));
-    if(state && !state.winner && c===currentColor()){
+    if(state && !state.gameOver && c===currentColor()){
       svg.appendChild(el("rect",{
         x:p.x-3,y:p.y-3,width:6*CELL+6,height:6*CELL+6,rx:16,
         fill:"none",stroke:"#fff","stroke-width":5,class:"active-yard-glow"
@@ -3520,7 +3547,7 @@ function effectiveSelectedDieIndex(){
 }
 
 function isEligiblePawn(p){
-  if(!state || state.phase!=="rolled" || state.winner) return false;
+  if(!state || state.phase!=="rolled" || state.gameOver) return false;
   if(p.color!==currentColor()) return false;
   if(state.seats[currentColor()]==="bot") return false;
   if(online && !isMyTurnOnline()) return false;
@@ -3682,7 +3709,7 @@ function onPawnClicked(p){
   const proceed = (move)=>{
     state.dice.splice(dieIdx,1);
     selectedDie=null;
-    animatePawnHop(p, move.type, move.newProgress, ()=>{
+    animatePawnHop(p, move, ()=>{
       applyMove(p, die, move);
       renderAll();
       broadcastState();
@@ -3697,7 +3724,7 @@ function onPawnClicked(p){
 }
 
 function postMoveFlow(){
-  if(state.winner) return;
+  if(state.gameOver) return;
   if(state.dice.length===0){
     finishDiceUsage(grantsBonus(state.diceHistory));
   } else if(!anyValidMove()){
