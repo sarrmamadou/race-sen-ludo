@@ -743,51 +743,74 @@ function possibleMovesForPawn(p, die){
     // Option A: normal continuation on loop or into own home column
     if(newProgress<=51){
       // check path cells crossed (p.progress+1 .. newProgress) for barrages of other colors
-      let blocked=false, blockedBy=null;
+      let blocked=false;
+      let finalProgress = newProgress;
       for(let s=p.progress+1;s<=newProgress;s++){
         const idx = globalIndex(p.color, s);
         const st = stackInfo("path:"+idx);
         if(st && st.color!==p.color && st.count>=2){
-          if(state.sixStreak < st.count){ blocked=true; blockedBy=st; break; }
+          if(p.progress===s-1 && state.sixStreak>=st.count){
+            finalProgress = s+1; // saut : atterrit juste après le barrage, quel que soit le dé
+          } else {
+            blocked=true;
+          }
+          break;
         }
       }
       // Une case de départ ne peut être "prise" (capture) que par un six — sinon le
       // pion adverse seul présent reste protégé et le mouvement n'est pas autorisé.
       if(!blocked && die!==6){
-        const finalIdx = globalIndex(p.color, newProgress);
+        const finalIdx = globalIndex(p.color, finalProgress);
         if(START_CELL_INDEXES.has(finalIdx)){
           const stFinal = stackInfo("path:"+finalIdx);
           if(stFinal && stFinal.color!==p.color) blocked = true;
         }
       }
-      if(!blocked) moves.push({type:"advance", newProgress});
+      if(!blocked) moves.push({type:"advance", newProgress:finalProgress});
     } else {
       // goes into own home column (progress 52..56) or finish(57)
       const depth = newProgress-51; // 1..
-      // still must cross remaining loop cells up to 51 first
+      // still must cross remaining loop cells up to 51 first — même règle du
+      // barrage que sur le chemin commun (il faut être juste devant pour sauter).
       let blocked=false;
+      let jumpProgress = null;
       for(let s=p.progress+1;s<=51;s++){
         const idx = globalIndex(p.color, s);
         const st = stackInfo("path:"+idx);
-        if(st && st.color!==p.color && st.count>=2 && state.sixStreak < st.count){ blocked=true; break; }
+        if(st && st.color!==p.color && st.count>=2){
+          if(p.progress===s-1 && state.sixStreak>=st.count){
+            jumpProgress = s+1; // saut : reste sur le chemin commun, juste après le barrage
+          } else {
+            blocked=true;
+          }
+          break;
+        }
       }
       if(!blocked){
-        if(depth<=5) moves.push({type:"advance", newProgress}); // will be interpreted as entering home column
+        if(jumpProgress!==null) moves.push({type:"advance", newProgress:jumpProgress});
+        else if(depth<=5) moves.push({type:"advance", newProgress}); // will be interpreted as entering home column
         else if(depth===6) moves.push({type:"finish"});
         // depth>6 => overshoot, invalid (must land exactly)
 
         // Choix possible : poursuivre encore sur le chemin commun (un tour de plus)
         // au lieu de rentrer dans son couloir final pour finir la course.
         let blockedLoop=false;
+        let loopFinalProgress = ((newProgress-1)%51)+1;
         for(let s=p.progress+1;s<=newProgress;s++){
           const wp = ((s-1)%51)+1;
           const idx2 = globalIndex(p.color, wp);
           const st2 = stackInfo("path:"+idx2);
-          if(st2 && st2.color!==p.color && st2.count>=2 && state.sixStreak < st2.count){ blockedLoop=true; break; }
+          if(st2 && st2.color!==p.color && st2.count>=2){
+            if(p.progress===s-1 && state.sixStreak>=st2.count){
+              loopFinalProgress = (((s+1)-1)%51)+1; // saut : juste après le barrage, en gardant le bouclage
+            } else {
+              blockedLoop=true;
+            }
+            break;
+          }
         }
         if(!blockedLoop){
-          const wrappedProgress = ((newProgress-1)%51)+1;
-          moves.push({type:"continueLoop", newProgress:wrappedProgress});
+          moves.push({type:"continueLoop", newProgress:loopFinalProgress});
         }
       }
     }
@@ -2559,7 +2582,7 @@ document.getElementById("helpBtn").addEventListener("click", ()=>{
       <p>Quand plusieurs actions sont possibles pour un pion (continuer, entrer dans son couloir, envahir une maison adverse, refuser…), des flèches apparaissent directement sur le plateau à côté du pion. Cliquez sur celle que vous voulez.</p>
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🧱 Le barrage</p>
-      <p>2 pions ou plus de la même couleur peuvent se poser sur la même case pour former un barrage. Un adversaire ne peut ni le traverser ni s'y arrêter, sauf s'il a obtenu, ce tour-ci, <b>autant de six qu'il y a de pions empilés</b>.</p>
+      <p>2 pions ou plus de la même couleur peuvent se poser sur la même case pour former un barrage. Un adversaire ne peut ni le traverser ni s'y arrêter : il doit d'abord s'approcher normalement jusqu'à la case juste avant, puis, une fois là, obtenir <b>autant de six d'affilée qu'il y a de pions empilés</b> pour sauter — il atterrit alors juste après le barrage. En attendant, il peut choisir d'envahir une maison adverse si un coup le permet, ou rester sur place.</p>
 
       <p style="color:var(--gold);font-weight:700;margin:10px 0 2px;">🏠 Envahir la maison d'un adversaire</p>
       <p><b>N'importe quel pion, où qu'il soit sur le plateau, peut envahir</b> le couloir final d'une couleur adverse — pas besoin d'être déjà juste devant. Il suffit que la valeur du dé soit suffisante pour l'y amener et continuer dedans (ex : à 3 cases de la jonction avec un 5, il entre 2 cases dans le couloir). Il ne peut pas y finir sa course : pour en ressortir, il recule case par case, et <b>chaque recul coûte un six</b>. En reculant, il capture aussi tout pion isolé rencontré sur son chemin.</p>
