@@ -1543,8 +1543,12 @@ async function purchaseNativeSubscription(){
     const active = result.customerInfo.entitlements.active[REVENUECAT_ENTITLEMENT];
     if(active){
       const until = new Date(Date.now() + 365*24*3600*1000).toISOString();
-      await supabaseClient.from("profiles").update({subscription_active_until: until}).eq("id", currentUser.id);
+      const { error: subUpdErr } = await supabaseClient.from("profiles").update({subscription_active_until: until}).eq("id", currentUser.id);
       currentProfile = await fetchOrCreateProfile(currentUser.id);
+      if(subUpdErr || !isSubscriptionActive(currentProfile)){
+        alert("Achat confirmé par Apple, mais la synchronisation avec votre compte a échoué. Réessayez \"Restaurer mon abonnement\" dans quelques instants, ou contactez le support si ça persiste.");
+        return;
+      }
       refreshUserBar();
       showGameUi();
     }
@@ -1672,8 +1676,12 @@ document.getElementById("paywallRecheckBtnNative").addEventListener("click", asy
     const { customerInfo } = await Purchases.restorePurchases();
     if(customerInfo.entitlements.active[REVENUECAT_ENTITLEMENT]){
       const until = new Date(Date.now() + 365*24*3600*1000).toISOString();
-      await supabaseClient.from("profiles").update({subscription_active_until: until}).eq("id", currentUser.id);
+      const { error: subUpdErr } = await supabaseClient.from("profiles").update({subscription_active_until: until}).eq("id", currentUser.id);
       currentProfile = await fetchOrCreateProfile(currentUser.id);
+      if(subUpdErr || !isSubscriptionActive(currentProfile)){
+        statusEl.textContent = "Abonnement confirmé par Apple, mais la synchronisation avec votre compte a échoué. Réessayez dans quelques instants.";
+        return;
+      }
       refreshUserBar();
       showGameUi();
     } else {
