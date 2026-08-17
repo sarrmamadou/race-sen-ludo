@@ -1035,6 +1035,7 @@ function checkWin(){
   // qu'un seul joueur actif encore en course, sa place (dernier) est déjà
   // connue — la partie s'arrête là et affiche le classement complet.
   const gameOverThreshold = Math.max(1, state.active.length-1);
+  logMsg(`🔧 DEBUG fin de partie : actifs=[${state.active.join(",")}] (${state.active.length}), seuil=${gameOverThreshold}, arrives=[${state.finishOrder.join(",")}] (${state.finishOrder.length})`);
   if(!state.gameOver && state.finishOrder.length >= gameOverThreshold){
     state.gameOver = true;
   }
